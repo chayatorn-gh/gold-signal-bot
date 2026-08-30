@@ -56,12 +56,30 @@ jobs:
 
       - name: Commit updated state.json / docs/data.json (if changed)
         run: |
-          if [ -n "$(git status --porcelain state.json docs/data.json)" ]; then
-            git config user.name "gold-signal-bot"
-            git config user.email "actions@users.noreply.github.com"
-            git add state.json docs/data.json
+          git config user.name "gold-signal-bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          # Only 'git add' files that actually exist on disk -- if the market
+          # was closed this run, gold_signal_engine.py may skip creating
+          # state.json entirely, and a bare `git status <path>` on a path
+          # that has never existed errors out with "did not match any files".
+          TO_ADD=""
+          for f in state.json docs/data.json; do
+            if [ -f "$f" ]; then
+              TO_ADD="$TO_ADD $f"
+            fi
+          done
+
+          if [ -z "$TO_ADD" ]; then
+            echo "Neither state.json nor docs/data.json exist yet -- nothing to commit."
+            exit 0
+          fi
+
+          git add $TO_ADD
+
+          if git diff --cached --quiet; then
+            echo "No content changes to commit."
+          else
             git commit -m "chore: update signal state + dashboard data [skip ci]"
             git push
-          else
-            echo "No state change -- nothing to commit."
           fi
