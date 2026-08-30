@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🥇 Gold Signal Tracker + LINE Alert</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --gold: #FFD700;
+    --gold-dark: #B8860B;
+    --gold-light: #FFF8DC;
+    --bg: #0a0a0f;
+    --bg2: #13131a;
+    --bg3: #1a1a25;
+    --card: #1e1e2e;
+    --border: #2a2a3e;
+    --text: #e0e0f0;
+    --text2: #888899;
+    --green: #00e676;
+    --red: #ff4444;
+    --blue: #4fc3f7;
+    --purple: #ce93d8;
+    --orange: #ffb74d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    background: linear-gradient(135deg, #1a1a00 0%, #0a0a0f 50%, #1a0a00 100%);
+    border-bottom: 1px solid var(--gold-dark);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 1.6rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--gold), #fff, var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .live-badge {
+    background: var(--red);
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    animation: pulse 1.5s infinite;
+    letter-spacing: 1px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .price-display {
+    text-align: right;
+  }
+
+  .current-price {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .price-change {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .price-change.up { color: var(--green); }
+  .price-change.down { color: var(--red); }
+
+  /* ===== MAIN LAYOUT ===== */
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 16px;
+  }
+
+  @media (max-width: 1024px) {
+    .container { grid-template-columns: 1fr; }
+  }
+
+  /* ===== CARDS ===== */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ===== SIGNAL BOX ===== */
+  .signal-box {
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    margin-bottom: 14px;
+    border: 2px solid transparent;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .signal-box.buy {
+    background: rgba(0, 230, 118, 0.1);
+    border-color: var(--green);
+    box-shadow: 0 0 30px rgba(0, 230, 118, 0.2);
+  }
+
+  .signal-box.sell {
+    background: rgba(255, 68, 68, 0.1);
+    border-color: var(--red);
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.2);
+  }
+
+  .signal-box.hold {
+    background: rgba(255, 183, 77, 0.1);
+    border-color: var(--orange);
+    box-shadow: 0 0 30px rgba(255, 183, 77, 0.15);
+  }
+
+  .signal-icon {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 6px;
+    animation: signalPulse 2s infinite;
+  }
+
+  @keyframes signalPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .signal-text {
+    font-size: 1.6rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+
+  .signal-box.buy .signal-text { color: var(--green); }
+  .signal-box.sell .signal-text { color: var(--red); }
+  .signal-box.hold .signal-text { color: var(--orange); }
+
+  .signal-sub {
+    font-size: 0.78rem;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+
+  .signal-strength {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text2);
+  }
+
+  .strength-bar {
+    display: flex;
+    gap: 3px;
+  }
+
+  .strength-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+
+  .strength-dot.active.buy { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .strength-dot.active.sell { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .strength-dot.active.hold { background: var(--orange); }
+
+  /* ===== INDICATORS ===== */
+  .indicators-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .indicator-item {
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .indicator-label {
+    font-size: 0.7rem;
+    color: var(--text2);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .indicator-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  .indicator-signal {
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .orange { color: var(--orange); }
+  .blue { color: var(--blue); }
+  .purple { color: var(--purple); }
+
+  /* ===== RSI GAUGE ===== */
+  .rsi-container {
+    background: var(--bg3);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+  }
+
+  .rsi-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text2);
+    margin-bottom: 6px;
+  }
+
+  .rsi-track {
+    height: 10px;
+    background: linear-gradient(90deg, var(--green) 0%, var(--green) 30%, var(--orange) 30%, var(--orange) 70%, var(--red) 70%);
+    border-radius: 20px;
+    position: relative;
+  }
+
+  .rsi-thumb {
+    position: absolute;
+    top: -4px;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    transition: left 1s ease;
+    border: 2px solid var(--bg);
+  }
+
+  .rsi-value {
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+
+  .rsi-status {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  /* ===== CHART AREA ===== */
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 320px;
+  }
+
+  .timeframe-btns {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tf-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tf-btn.active, .tf-btn:hover {
+    background: var(--gold-dark);
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* ===== STATS ROW ===== */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  @media (max-width: 768px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 400px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  .stat-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-top: 4px;
+  }
+
+  .stat-sub {
+    font-size: 0.7rem;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  /* ===== LINE SETTINGS ===== */
+  .line-section {
+    background: linear-gradient(135deg, rgba(0,185,0,0.08), rgba(0,100,0,0.05));
+    border: 1px solid rgba(0,185,0,0.3);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+
+  .line-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #06C755;
+    margin-bottom: 12px;
+  }
+
+  .line-icon {
+    width: 28px;
+    height: 28px;
+    background: #06C755;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  .form-label {
+    font-size: 0.72rem;
+    color: var(--text2);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-input:focus { border-color: var(--gold); }
+
+  .form-input::placeholder { color: var(--text2); }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .toggle-label {
+    font-size: 0.78rem;
+    color: var(--text);
+  }
+
+  .toggle {
+    position: relative;
+    width: 40px;
+    height: 22px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 22px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: #06C755; }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+  /* ===== BUTTONS ===== */
+  .btn {
+    padding: 9px 16px;
+    border-radius: 9px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn-line {
+    background: #06C755;
+    color: white;
+    margin-bottom: 8px;
+  }
+
+  .btn-line:hover { background: #05a847; transform: translateY(-1px); }
+
+  .btn-test {
+    background: var(--bg3);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-test:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ===== ALERT LOG ===== */
+  .alert-log {
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .alert-log::-webkit-scrollbar { width: 4px; }
+  .alert-log::-webkit-scrollbar-track { background: transparent; }
+  .alert-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .alert-item {
+    display: flex;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 0.78rem;
+    border-left: 3px solid;
+    background: var(--bg3);
+    animation: slideIn 0.4s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .alert-item.buy { border-color: var(--green); }
+  .alert-item.sell { border-color: var(--red); }
+  .alert-item.info { border-color: var(--blue); }
+
+  .alert-time {
+    color: var(--text2);
+    white-space: nowrap;
+    font-size: 0.72rem;
+  }
+
+  .alert-msg { flex: 1; }
+
+  /* ===== NOTIFICATION TOAST ===== */
+  #toast {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .toast-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 260px;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    animation: toastIn 0.4s ease, toastOut 0.4s ease 3.6s forwards;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    pointer-events: all;
+  }
+
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+  }
+
+  .toast-item.buy { border-color: var(--green); }
+  .toast-item.sell { border-color: var(--red); }
+
+  .toast-icon { font-size: 1.5rem; }
+  .toast-content { flex: 1; }
+  .toast-title { font-size: 0.85rem; font-weight: 700; }
+  .toast-msg { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
+
+  /* ===== STATUS INDICATOR ===== */
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--text2);
+    padding: 8px 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s infinite;
+  }
+
+  .status-dot.off { background: var(--text2); animation: none; }
+
+  /* ===== PRICE TICKER ===== */
+  .price-ticker {
+    display: flex;
+    gap: 20px;
+    overflow: hidden;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+  }
+
+  .ticker-item {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 0.78rem;
+  }
+
+  .ticker-name { color: var(--text2); }
+  .ticker-val { font-weight: 600; color: var(--text); }
+
+  /* ===== MINI CHART ===== */
+  .mini-chart-container {
+    height: 60px;
+    margin-top: 8px;
+  }
+
+  /* ===== CONDITIONS TABLE ===== */
+  .conditions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .condition-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--bg3);
+    border-radius: 8px;
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+  }
+
+  .condition-name { color: var(--text2); }
+  .condition-value { font-weight: 700; }
+
+  .badge {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+
+  .badge-buy { background: rgba(0,230,118,0.15); color: var(--green); }
+  .badge-sell { background: rgba(255,68,68,0.15); color: var(--red); }
+  .badge-neutral { background: rgba(255,183,77,0.15); color: var(--orange); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 600px) {
+    header { padding: 10px 12px; }
+    .logo { font-size: 1.2rem; }
+    .current-price { font-size: 1.4rem; }
+    .container { padding: 10px; }
+    .indicators-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Toast Container -->
+<div id="toast"></div>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <div class="logo">🥇 GoldSignal</div>
+    <span class="live-badge">● LIVE</span>
+  </div>
+  <div class="header-right">
+    <div class="price-display">
+      <div class="current-price" id="headerPrice">$0</div>
+      <div class="price-change" id="headerChange">+0 (0%)</div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Container -->
+<div class="container">
+
+  <!-- LEFT: Main Chart Area -->
+  <div class="main-content">
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">ราคาล่าสุด</div>
+        <div class="stat-value" id="priceDisplay">$0</div>
+        <div class="stat-sub" id="priceUnit">USD / Troy Ounce (GC=F)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">เปิดวันนี้</div>
+        <div class="stat-value" id="openPrice">฿0</div>
+        <div class="stat-sub" id="openChange">เปลี่ยนแปลง</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">สูงสุดวันนี้</div>
+        <div class="stat-value" id="highPrice">฿0</div>
+        <div class="stat-sub">High</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">ต่ำสุดวันนี้</div>
+        <div class="stat-value" id="lowPrice">฿0</div>
+        <div class="stat-sub">Low</div>
+      </div>
+    </div>
+
+    <!-- Price Chart -->
+    <div class="card">
+      <div class="card-title">📈 กราฟราคาทองคำ</div>
+      <div class="timeframe-btns">
+        <button class="tf-btn active" onclick="setTimeframe(this,'15m')">15M</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text2);margin:-6px 0 10px">
+        บอทดึงข้อมูลแท่งเทียน 15 นาทีเท่านั้น (timeframe อื่นยังไม่รองรับ)
+      </div>
+      <div class="chart-container">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+
+    <!-- RSI + MACD Charts -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">⚡ RSI (14)</div>
+        <div style="height:140px">
+          <canvas id="rsiChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 MACD</div>
+        <div style="height:140px">
+          <canvas id="macdChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signal Conditions -->
+    <div class="card">
+      <div class="card-title">🔍 เงื่อนไขสัญญาณ</div>
+      <div class="conditions-list" id="conditionsList"></div>
+    </div>
+
+    <!-- Alert Log -->
+    <div class="card">
+      <div class="card-title">📋 ประวัติสัญญาณ</div>
+      <div class="alert-log" id="alertLog">
+        <div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:20px">
+          รอสัญญาณแรก...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Signal + Settings Panel -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Signal Card -->
+    <div class="card">
+      <div class="card-title">🎯 สัญญาณปัจจุบัน</div>
+      <div class="signal-box hold" id="signalBox">
+        <div class="signal-icon" id="signalIcon">⏳</div>
+        <div class="signal-text" id="signalText">ANALYZING</div>
+        <div class="signal-sub" id="signalSub">กำลังวิเคราะห์...</div>
+        <div class="signal-strength">
+          <span>ความแรง:</span>
+          <div class="strength-bar" id="strengthBar">
+            <div class="strength-dot"></div>
+            <div class="strength-dot"></div>
+            <div class="strength-dot"></div>
+            <div class="strength-dot"></div>
+            <div class="strength-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Indicators Grid -->
+      <div class="indicators-grid">
+        <div class="indicator-item">
+          <div class="indicator-label">MA 20</div>
+          <div class="indicator-value" id="ma20Val">-</div>
+          <div class="indicator-signal" id="ma20Sig">-</div>
+        </div>
+        <div class="indicator-item">
+          <div class="indicator-label">MA 50</div>
+          <div class="indicator-value" id="ma50Val">-</div>
+          <div class="indicator-signal" id="ma50Sig">-</div>
+        </div>
+        <div class="indicator-item">
+          <div class="indicator-label">RSI 14</div>
+          <div class="indicator-value" id="rsiVal">-</div>
+          <div class="indicator-signal" id="rsiSig">-</div>
+        </div>
+        <div class="indicator-item">
+          <div class="indicator-label">MACD</div>
+          <div class="indicator-value" id="macdVal">-</div>
+          <div class="indicator-signal" id="macdSig">-</div>
+        </div>
+      </div>
+
+      <!-- RSI Gauge -->
+      <div class="rsi-container">
+        <div class="rsi-label">
+          <span>🟢 Oversold</span>
+          <span>RSI Meter</span>
+          <span>Overbought 🔴</span>
+        </div>
+        <div class="rsi-track">
+          <div class="rsi-thumb" id="rsiThumb" style="left:50%"></div>
+        </div>
+        <div class="rsi-value" id="rsiGaugeVal">50.0</div>
+        <div class="rsi-status" id="rsiGaugeStatus">Neutral</div>
+      </div>
+
+      <!-- Bollinger Bands -->
+      <div class="indicators-grid">
+        <div class="indicator-item">
+          <div class="indicator-label">BB Upper</div>
+          <div class="indicator-value blue" id="bbUpper">-</div>
+          <div class="indicator-signal" id="bbUpperSig">-</div>
+        </div>
+        <div class="indicator-item">
+          <div class="indicator-label">BB Lower</div>
+          <div class="indicator-value blue" id="bbLower">-</div>
+          <div class="indicator-signal" id="bbLowerSig">-</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Telegram Alert Status (read-only -- alerts are dispatched server-side
+         by gold_signal_engine.py on a GitHub Actions schedule, not from the
+         browser. LINE Notify was discontinued by LINE on 2025-03-31 and has
+         been replaced with Telegram throughout this project.) -->
+    <div class="card">
+      <div class="card-title">🔔 การแจ้งเตือน Telegram</div>
+
+      <div class="line-section" style="background:linear-gradient(135deg, rgba(79,195,247,0.08), rgba(0,60,100,0.05)); border-color:rgba(79,195,247,0.3)">
+        <div class="line-title" style="color:var(--blue)">
+          <div class="line-icon" style="background:var(--blue)">✈️</div>
+          Telegram Bot (อัตโนมัติ)
+        </div>
+        <div style="font-size:0.78rem;color:var(--text2);line-height:1.6;margin-bottom:10px">
+          บอทฝั่งเซิร์ฟเวอร์ (GitHub Actions) ดึงราคาทองจริงทุก 15 นาที
+          และส่งแจ้งเตือนเข้า Telegram โดยอัตโนมัติเมื่อเกิดสัญญาณ
+          EMA20/EMA50 Crossover — ไม่ต้องตั้งค่าอะไรในหน้านี้
+        </div>
+        <div id="lastAlertBox" style="font-size:0.8rem;color:var(--text2)">
+          ยังไม่มีสัญญาณที่ส่งเข้า Telegram
+        </div>
+      </div>
+    </div>
+
+    <!-- Status -->
+    <div class="card">
+      <div class="card-title">📡 สถานะระบบ</div>
+      <div class="status-row">
+        <div class="status-dot" id="sysDot"></div>
+        <span id="sysStatus">กำลังเชื่อมต่อ...</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.78rem">
+        <div style="color:var(--text2)">อัพเดทล่าสุด:</div>
+        <div id="lastUpdate" style="color:var(--text);text-align:right">-</div>
+        <div style="color:var(--text2)">สัญญาณที่ส่ง:</div>
+        <div id="alertCount" style="color:var(--gold);text-align:right;font-weight:700">0</div>
+        <div style="color:var(--text2)">สัญญาณล่าสุด:</div>
+        <div id="lastSignal" style="text-align:right">-</div>
+        <div style="color:var(--text2)">รอบข้อมูลของบอท:</div>
+        <div style="color:var(--text);text-align:right">ทุก 15 นาที</div>
+        <div style="color:var(--text2)">ตลาด:</div>
+        <div id="marketStatus" style="text-align:right">-</div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn" style="background:var(--gold-dark);color:white;flex:1" onclick="manualRefresh()">
+          <span>🔄</span>
+          <span>รีเฟรชตอนนี้</span>
+        </button>
+        <button class="btn btn-test" style="flex:1" onclick="clearLog()">
+          🗑️ ล้างประวัติ
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ===========================
+  // CONFIG
+  // ===========================
+  // data.json is written by gold_signal_engine.py (via GitHub Actions) and
+  // committed right next to this HTML file, so a relative path works both
+  // locally and on GitHub Pages.
+  const DATA_URL = './data.json';
+  const REFRESH_MS = 60 * 1000; // re-fetch data.json every 60s (backend updates every 15 min)
+  const LOG_STORAGE_KEY = 'goldSignalAlertLog';
+  const PREV_SIGNAL_KEY = 'goldSignalPrevSignal';
+
+  let priceChart, rsiChart, macdChart;
+  let latestData = null;
+
+  // ===========================
+  // FORMAT HELPERS (USD, since GC=F / gold futures are quoted in USD/oz)
+  // ===========================
+  function fmt(n) {
+    if (n === null || n === undefined || isNaN(n)) return '-';
+    return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtSmall(n) {
+    if (n === null || n === undefined || isNaN(n)) return '-';
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  }
+
+  // ===========================
+  // DATA FETCH
+  // ===========================
+  async function loadData() {
+    try {
+      const res = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      latestData = data;
+      renderAll(data);
+      document.getElementById('sysDot').className = 'status-dot';
+      document.getElementById('sysStatus').textContent = 'ระบบทำงานปกติ — เชื่อมต่อบอทสำเร็จ';
+    } catch (err) {
+      console.error('Failed to load data.json:', err);
+      document.getElementById('sysDot').className = 'status-dot off';
+      document.getElementById('sysStatus').textContent = 'ยังไม่พบข้อมูลจากบอท (รอ GitHub Actions รันครั้งแรก)';
+      showInfoToast('ยังโหลดข้อมูลจากบอทไม่ได้ — ตรวจสอบว่า workflow รันสำเร็จแล้วหรือยัง');
+    }
+  }
+
+  function manualRefresh() {
+    showInfoToast('กำลังรีเฟรชข้อมูล...');
+    loadData();
+  }
+
+  // ===========================
+  // RENDER
+  // ===========================
+  function renderAll(data) {
+    const analysis = data.analysis || {};
+    const history = analysis.history || { labels: [], prices: [], ma20: [], ma50: [], rsi: [], macd: [], histogram: [] };
+    const prices = history.prices || [];
+    const current = analysis.current_price ?? (prices.length ? prices[prices.length - 1] : null);
+    const openPrice = prices.length ? prices[0] : null;
+    const highPrice = prices.length ? Math.max(...prices) : null;
+    const lowPrice = prices.length ? Math.min(...prices) : null;
+    const change = (current !== null && openPrice !== null) ? current - openPrice : 0;
+    const changePct = (openPrice) ? ((change / openPrice) * 100).toFixed(2) : '0.00';
+    const isUp = change >= 0;
+
+    // --- Header ---
+    document.getElementById('headerPrice').textContent = fmt(current);
+    const changeEl = document.getElementById('headerChange');
+    changeEl.textContent = `${isUp ? '+' : ''}${fmtSmall(change)} (${isUp ? '+' : ''}${changePct}%)`;
+    changeEl.className = `price-change ${isUp ? 'up' : 'down'}`;
+
+    // --- Stats row ---
+    document.getElementById('priceDisplay').textContent = fmt(current);
+    document.getElementById('priceDisplay').style.color = isUp ? 'var(--green)' : 'var(--red)';
+    document.getElementById('openPrice').textContent = fmt(openPrice);
+    document.getElementById('openChange').textContent = `${isUp ? '+' : ''}${changePct}%`;
+    document.getElementById('openChange').style.color = isUp ? 'var(--green)' : 'var(--red)';
+    document.getElementById('highPrice').textContent = fmt(highPrice);
+    document.getElementById('lowPrice').textContent = fmt(lowPrice);
+
+    // --- Signal box ---
+    const signal = analysis.signal || 'hold';
+    const sigBox = document.getElementById('signalBox');
+    sigBox.className = `signal-box ${signal}`;
+    const icons = { buy: '🚀', sell: '⚠️', hold: '⏸️' };
+    const texts = { buy: 'ซื้อ / BUY', sell: 'ขาย / SELL', hold: 'รอดูก่อน' };
+    const subs = {
+      buy: `คะแนน BUY: ${analysis.buy_score ?? 0} | SELL: ${analysis.sell_score ?? 0}`,
+      sell: `คะแนน SELL: ${analysis.sell_score ?? 0} | BUY: ${analysis.buy_score ?? 0}`,
+      hold: `BUY: ${analysis.buy_score ?? 0} | SELL: ${analysis.sell_score ?? 0} | ยังไม่ชัดเจน`
+    };
+    document.getElementById('signalIcon').textContent = icons[signal] || '⏳';
+    document.getElementById('signalText').textContent = texts[signal] || 'ANALYZING';
+    document.getElementById('signalSub').textContent = subs[signal] || '';
+
+    // Strength dots
+    const strength = analysis.strength ?? 0;
+    document.querySelectorAll('.strength-dot').forEach((d, i) => {
+      d.className = `strength-dot ${i < strength ? ('active ' + signal) : ''}`;
+    });
+
+    // --- Indicators grid ---
+    const ma20 = analysis.ma20, ma50 = analysis.ma50, rsi = analysis.rsi, macd = analysis.macd, hist = analysis.histogram;
+    const ma20c = (ma20 !== null && current !== null && ma20 > current) ? 'red' : 'green';
+    const ma50c = (ma50 !== null && current !== null && ma50 > current) ? 'red' : 'green';
+
+    document.getElementById('ma20Val').textContent = fmtSmall(ma20);
+    document.getElementById('ma20Val').className = `indicator-value ${ma20c}`;
+    document.getElementById('ma20Sig').textContent = (ma20 !== null && current !== null)
+      ? (ma20 > current ? '🔴 ต่ำกว่า MA20' : '🟢 สูงกว่า MA20') : 'ข้อมูลไม่พอ';
+    document.getElementById('ma20Sig').className = `indicator-signal ${ma20c}`;
+
+    document.getElementById('ma50Val').textContent = fmtSmall(ma50);
+    document.getElementById('ma50Val').className = `indicator-value ${ma50c}`;
+    document.getElementById('ma50Sig').textContent = (ma50 !== null && current !== null)
+      ? (ma50 > current ? '🔴 ต่ำกว่า MA50' : '🟢 สูงกว่า MA50') : 'ข้อมูลไม่พอ';
+    document.getElementById('ma50Sig').className = `indicator-signal ${ma50c}`;
+
+    const rsiColor = (rsi === null) ? 'orange' : (rsi < 30 ? 'green' : rsi > 70 ? 'red' : 'orange');
+    const rsiText = (rsi === null) ? 'ข้อมูลไม่พอ'
+      : (rsi < 30 ? '🟢 Oversold - โอกาสซื้อ' : rsi > 70 ? '🔴 Overbought - โอกาสขาย' : '🟡 Neutral');
+    document.getElementById('rsiVal').textContent = rsi ?? '-';
+    document.getElementById('rsiVal').className = `indicator-value ${rsiColor}`;
+    document.getElementById('rsiSig').textContent = rsiText;
+    document.getElementById('rsiSig').className = `indicator-signal ${rsiColor}`;
+
+    const macdColor = (hist === null) ? 'orange' : (hist > 0 ? 'green' : 'red');
+    document.getElementById('macdVal').textContent = (macd !== null && macd !== undefined) ? macd.toFixed(1) : '-';
+    document.getElementById('macdVal').className = `indicator-value ${macdColor}`;
+    document.getElementById('macdSig').textContent = (hist === null) ? 'ข้อมูลไม่พอ' : (hist > 0 ? '🟢 Bullish' : '🔴 Bearish');
+    document.getElementById('macdSig').className = `indicator-signal ${macdColor}`;
+
+    // --- RSI gauge ---
+    const rsiPct = rsi !== null ? rsi : 50;
+    document.getElementById('rsiThumb').style.left = `${rsiPct}%`;
+    document.getElementById('rsiGaugeVal').textContent = rsi ?? '-';
+    document.getElementById('rsiGaugeVal').className = `rsi-value ${rsiColor}`;
+    document.getElementById('rsiGaugeStatus').textContent = (rsi === null) ? '↔️ ข้อมูลไม่พอ'
+      : (rsi < 30 ? '📉 Oversold — โอกาสราคาขึ้น' : rsi > 70 ? '📈 Overbought — โอกาสราคาลง' : '↔️ Neutral');
+
+    // --- Bollinger Bands ---
+    const bbUpper = analysis.bb_upper, bbLower = analysis.bb_lower;
+    document.getElementById('bbUpper').textContent = fmtSmall(bbUpper);
+    document.getElementById('bbLower').textContent = fmtSmall(bbLower);
+    if (bbUpper !== null && current !== null) {
+      document.getElementById('bbUpperSig').textContent = current > bbUpper ? '⚠️ เหนือแนวต้าน' : '✅ ต่ำกว่า Upper';
+      document.getElementById('bbUpperSig').className = 'indicator-signal ' + (current > bbUpper ? 'red' : 'green');
+    }
+    if (bbLower !== null && current !== null) {
+      document.getElementById('bbLowerSig').textContent = current < bbLower ? '✅ ต่ำกว่า Lower' : '🔹 สูงกว่า Lower';
+      document.getElementById('bbLowerSig').className = 'indicator-signal ' + (current < bbLower ? 'green' : 'blue');
+    }
+
+    // --- Conditions list ---
+    const condEl = document.getElementById('conditionsList');
+    const conditions = analysis.conditions || [];
+    condEl.innerHTML = conditions.map(c => `
+      <div class="condition-item">
+        <span class="condition-name">${c.name}</span>
+        <span class="badge badge-${c.badge}">${c.badge === 'buy' ? '📈 BUY' : c.badge === 'sell' ? '📉 SELL' : '↔️ NEUTRAL'}</span>
+      </div>
+    `).join('');
+
+    // --- Telegram alert box (real, event-based EMA-crossover alert from the bot) ---
+    const alertBox = document.getElementById('lastAlertBox');
+    const lastAlert = data.last_telegram_alert;
+    if (lastAlert) {
+      const color = lastAlert.signal_type === 'BUY' ? 'var(--green)' : 'var(--red)';
+      alertBox.innerHTML = `
+        <div style="font-weight:700;color:${color};margin-bottom:4px">
+          ${lastAlert.signal_type === 'BUY' ? '🟢 BUY' : '🔴 SELL'} @ ${fmt(lastAlert.entry_price)}
+        </div>
+        <div>SL: ${fmt(lastAlert.stop_loss)} &nbsp;|&nbsp; TP: ${fmt(lastAlert.take_profit)}</div>
+        <div>Size: ${fmt(lastAlert.position_size_usd)} &nbsp;|&nbsp; Risk: ${fmt(lastAlert.risk_amount_usd)}</div>
+        <div style="margin-top:4px;color:var(--text2);font-size:0.72rem">แท่งเทียน: ${lastAlert.candle_time || '-'}</div>
+      `;
+    } else {
+      alertBox.textContent = 'ยังไม่มีสัญญาณที่ส่งเข้า Telegram';
+    }
+
+    // --- System status ---
+    document.getElementById('lastUpdate').textContent = data.generated_at_utc
+      ? new Date(data.generated_at_utc + 'Z').toLocaleTimeString('th-TH')
+      : '-';
+    document.getElementById('marketStatus').textContent = data.market_open ? '🟢 เปิด' : '🔴 ปิด';
+    if (lastAlert) {
+      document.getElementById('lastSignal').textContent = lastAlert.signal_type === 'BUY' ? '🟢 BUY' : '🔴 SELL';
+      document.getElementById('lastSignal').style.color = lastAlert.signal_type === 'BUY' ? 'var(--green)' : 'var(--red)';
+    }
+
+    // --- Charts ---
+    renderCharts(history);
+
+    // --- Detect a NEW dashboard signal (continuous score system) for the local log/toast ---
+    checkForNewDashboardSignal(signal, current);
+  }
+
+  // ===========================
+  // CHARTS (driven entirely by server-computed history arrays)
+  // ===========================
+  function renderCharts(history) {
+    Chart.defaults.color = '#888899';
+    Chart.defaults.borderColor = '#2a2a3e';
+
+    const labels = history.labels || [];
+    const prices = history.prices || [];
+    const ma20 = history.ma20 || [];
+    const ma50 = history.ma50 || [];
+    const rsiArr = history.rsi || [];
+    const macdArr = history.macd || [];
+    const histArr = history.histogram || [];
+
+    if (!priceChart) {
+      const ctx1 = document.getElementById('priceChart').getContext('2d');
+      priceChart = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'ราคาทอง (USD)', data: prices, borderColor: '#FFD700', borderWidth: 2,
+              pointRadius: 0, tension: 0.3, fill: true,
+              backgroundColor: (ctx) => {
+                const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 300);
+                g.addColorStop(0, 'rgba(255,215,0,0.15)'); g.addColorStop(1, 'rgba(255,215,0,0)');
+                return g;
+              }
+            },
+            { label: 'MA20', data: ma20, borderColor: '#4fc3f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false },
+            { label: 'MA50', data: ma50, borderColor: '#ce93d8', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+          plugins: {
+            legend: { labels: { font: { size: 11 }, boxWidth: 20, padding: 10 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` } }
+          },
+          scales: {
+            x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { callback: v => '$' + v.toLocaleString('en-US'), font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+
+      const ctx2 = document.getElementById('rsiChart').getContext('2d');
+      rsiChart = new Chart(ctx2, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'RSI', data: rsiArr, borderColor: '#ffb74d', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 5, font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { min: 0, max: 100, ticks: { stepSize: 20, font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+
+      const ctx3 = document.getElementById('macdChart').getContext('2d');
+      macdChart = new Chart(ctx3, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'MACD Histogram', data: histArr, backgroundColor: histArr.map(v => (v ?? 0) >= 0 ? 'rgba(0,230,118,0.7)' : 'rgba(255,68,68,0.7)'), borderRadius: 2 },
+            { label: 'MACD Line', data: macdArr, type: 'line', borderColor: '#4fc3f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 200 },
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 5, font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+            y: { ticks: { font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+          }
+        }
+      });
+      return;
+    }
+
+    // Update existing charts in place
+    priceChart.data.labels = labels;
+    priceChart.data.datasets[0].data = prices;
+    priceChart.data.datasets[1].data = ma20;
+    priceChart.data.datasets[2].data = ma50;
+    priceChart.update('none');
+
+    rsiChart.data.labels = labels;
+    rsiChart.data.datasets[0].data = rsiArr;
+    rsiChart.update('none');
+
+    macdChart.data.labels = labels;
+    macdChart.data.datasets[0].data = histArr;
+    macdChart.data.datasets[0].backgroundColor = histArr.map(v => (v ?? 0) >= 0 ? 'rgba(0,230,118,0.7)' : 'rgba(255,68,68,0.7)');
+    macdChart.data.datasets[1].data = macdArr;
+    macdChart.update('none');
+  }
+
+  // ===========================
+  // LOCAL SIGNAL-CHANGE LOG (client-side only; the REAL alert is Telegram,
+  // sent server-side. This just visually logs when the dashboard's own
+  // continuous buy/sell/hold score changes between page refreshes.)
+  // ===========================
+  function checkForNewDashboardSignal(signal, price) {
+    if (signal === 'hold') return;
+    const prevSignal = localStorage.getItem(PREV_SIGNAL_KEY);
+    if (signal === prevSignal) return;
+    localStorage.setItem(PREV_SIGNAL_KEY, signal);
+
+    showToast(signal, price);
+    addLog(signal, `สัญญาณเปลี่ยนเป็น ${signal.toUpperCase()} ที่ราคา ${fmt(price)}`);
+  }
+
+  function showToast(signal, price) {
+    const toast = document.getElementById('toast');
+    const item = document.createElement('div');
+    item.className = `toast-item ${signal}`;
+    item.innerHTML = `
+      <div class="toast-icon">${signal === 'buy' ? '🚀' : '⚠️'}</div>
+      <div class="toast-content">
+        <div class="toast-title" style="color:${signal === 'buy' ? 'var(--green)' : 'var(--red)'}">
+          สัญญาณ ${signal === 'buy' ? 'ซื้อ / BUY' : 'ขาย / SELL'}
+        </div>
+        <div class="toast-msg">ราคา: ${fmt(price)}</div>
+      </div>`;
+    toast.appendChild(item);
+    setTimeout(() => item.remove(), 4000);
+  }
+
+  function showInfoToast(msg) {
+    const toast = document.getElementById('toast');
+    const item = document.createElement('div');
+    item.className = 'toast-item';
+    item.innerHTML = `
+      <div class="toast-icon">ℹ️</div>
+      <div class="toast-content">
+        <div class="toast-title">แจ้งเตือน</div>
+        <div class="toast-msg">${msg}</div>
+      </div>`;
+    toast.appendChild(item);
+    setTimeout(() => item.remove(), 4000);
+  }
+
+  function addLog(type, msg) {
+    const log = document.getElementById('alertLog');
+    if (log.children.length === 1 && log.children[0].style.textAlign === 'center') {
+      log.innerHTML = '';
+    }
+    const item = document.createElement('div');
+    item.className = `alert-item ${type}`;
+    const time = new Date().toLocaleTimeString('th-TH');
+    item.innerHTML = `
+      <span class="alert-time">${time}</span>
+      <span class="alert-msg" style="color:${type === 'buy' ? 'var(--green)' : type === 'sell' ? 'var(--red)' : 'var(--blue)'}">
+        ${type === 'buy' ? '🚀 BUY' : type === 'sell' ? '📉 SELL' : 'ℹ️ INFO'}: ${msg}
+      </span>`;
+    log.insertBefore(item, log.firstChild);
+    while (log.children.length > 30) log.removeChild(log.lastChild);
+
+    // Persist a lightweight copy so the log survives a page reload
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
+      saved.unshift({ type, msg, time });
+      localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(saved.slice(0, 30)));
+    } catch (e) { /* localStorage unavailable -- ignore */ }
+  }
+
+  function restoreLog() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
+      if (!saved.length) return;
+      const log = document.getElementById('alertLog');
+      log.innerHTML = '';
+      saved.forEach(entry => {
+        const item = document.createElement('div');
+        item.className = `alert-item ${entry.type}`;
+        item.innerHTML = `
+          <span class="alert-time">${entry.time}</span>
+          <span class="alert-msg" style="color:${entry.type === 'buy' ? 'var(--green)' : entry.type === 'sell' ? 'var(--red)' : 'var(--blue)'}">
+            ${entry.type === 'buy' ? '🚀 BUY' : entry.type === 'sell' ? '📉 SELL' : 'ℹ️ INFO'}: ${entry.msg}
+          </span>`;
+        log.appendChild(item);
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  function clearLog() {
+    document.getElementById('alertLog').innerHTML = `
+      <div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:20px">ล้างประวัติแล้ว</div>`;
+    localStorage.removeItem(LOG_STORAGE_KEY);
+    localStorage.removeItem(PREV_SIGNAL_KEY);
+  }
+
+  function setTimeframe(btn, tf) {
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  // ===========================
+  // INIT
+  // ===========================
+  function init() {
+    restoreLog();
+    loadData();
+    setInterval(loadData, REFRESH_MS);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  // Expose globals used by inline onclick handlers
+  window.clearLog = clearLog;
+  window.setTimeframe = setTimeframe;
+  window.manualRefresh = manualRefresh;
+
+})();
+</script>
+</body>
+</html>
