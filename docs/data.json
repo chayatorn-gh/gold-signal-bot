@@ -1,38 +1,38 @@
 {
-  "generated_at_utc": "2026-08-31T06:10:13.894866",
-  "market_time_ict": "2026-08-31 13:10:13",
+  "generated_at_utc": "2026-08-31T06:23:23.648409",
+  "market_time_ict": "2026-08-31 13:23:23",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
   "analysis": {
-    "signal": "buy",
+    "signal": "hold",
     "strength": 2,
-    "buy_score": 4,
-    "sell_score": 2,
-    "current_price": 4487.4,
-    "ma20": 4484.16,
-    "ma50": 4502.93,
-    "rsi": 44.43,
-    "macd": -7.75,
-    "macd_signal": -11.63,
-    "histogram": 3.88,
-    "bb_upper": 4516.01,
-    "bb_lower": 4452.3,
+    "buy_score": 3,
+    "sell_score": 3,
+    "current_price": 4483.2,
+    "ma20": 4483.95,
+    "ma50": 4502.84,
+    "rsi": 42.87,
+    "macd": -8.09,
+    "macd_signal": -11.7,
+    "histogram": 3.61,
+    "bb_upper": 4515.77,
+    "bb_lower": 4452.12,
     "conditions": [
       {
         "name": "MA20 < MA50 (Death Cross)",
         "badge": "sell"
       },
       {
-        "name": "ราคา > MA20 (4,484)",
-        "badge": "buy"
+        "name": "ราคา < MA20 (4,484)",
+        "badge": "sell"
       },
       {
-        "name": "RSI 44.4 (Weak Bear)",
+        "name": "RSI 42.9 (Weak Bear)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram +3.9",
+        "name": "MACD Histogram +3.6",
         "badge": "buy"
       },
       {
@@ -203,7 +203,7 @@
         4489.9,
         4486.6,
         4492.7,
-        4487.4
+        4483.2
       ],
       "ma20": [
         4643.36,
@@ -285,7 +285,7 @@
         4486.6,
         4486.11,
         4485.35,
-        4484.16
+        4483.95
       ],
       "ma50": [
         4647.35,
@@ -367,7 +367,7 @@
         4510.01,
         4507.51,
         4504.99,
-        4502.93
+        4502.84
       ],
       "rsi": [
         64.97,
@@ -449,7 +449,7 @@
         43.37,
         46.75,
         49.66,
-        44.43
+        42.87
       ],
       "macd": [
         5.83,
@@ -531,7 +531,7 @@
         -12.11,
         -10.61,
         -8.83,
-        -7.75
+        -8.09
       ],
       "histogram": [
         3.58,
@@ -613,7 +613,7 @@
         2.18,
         2.94,
         3.78,
-        3.88
+        3.61
       ]
     }
   },
