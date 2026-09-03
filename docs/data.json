@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-09-03T10:42:03.782595",
-  "market_time_ict": "2026-09-03 17:42:03",
+  "generated_at_utc": "2026-09-03T10:54:37.787542",
+  "market_time_ict": "2026-09-03 17:54:37",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
@@ -9,30 +9,30 @@
     "strength": 2,
     "buy_score": 2,
     "sell_score": 3,
-    "current_price": 4466.6,
-    "ma20": 4474.39,
-    "ma50": 4462.48,
-    "rsi": 48.7,
-    "macd": 2.09,
-    "macd_signal": 4.4,
-    "histogram": -2.31,
-    "bb_upper": 4485.97,
-    "bb_lower": 4462.8,
+    "current_price": 4471.4,
+    "ma20": 4474.63,
+    "ma50": 4462.58,
+    "rsi": 54.31,
+    "macd": 2.47,
+    "macd_signal": 4.48,
+    "histogram": -2.0,
+    "bb_upper": 4485.72,
+    "bb_lower": 4463.53,
     "conditions": [
       {
         "name": "MA20 > MA50 (Golden Cross)",
         "badge": "buy"
       },
       {
-        "name": "ราคา < MA20 (4,474)",
+        "name": "ราคา < MA20 (4,475)",
         "badge": "sell"
       },
       {
-        "name": "RSI 48.7 (Neutral)",
+        "name": "RSI 54.3 (Neutral)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram -2.3",
+        "name": "MACD Histogram -2.0",
         "badge": "sell"
       },
       {
@@ -203,7 +203,7 @@
         4473.9,
         4470.9,
         4468.7,
-        4466.6
+        4471.4
       ],
       "ma20": [
         4375.91,
@@ -285,7 +285,7 @@
         4475.3,
         4475.08,
         4474.97,
-        4474.39
+        4474.63
       ],
       "ma50": [
         4365.62,
@@ -367,7 +367,7 @@
         4460.44,
         4461.16,
         4461.85,
-        4462.48
+        4462.58
       ],
       "rsi": [
         92.4,
@@ -449,7 +449,7 @@
         57.02,
         49.21,
         52.77,
-        48.7
+        54.31
       ],
       "macd": [
         13.2,
@@ -531,7 +531,7 @@
         4.74,
         3.88,
         2.99,
-        2.09
+        2.47
       ],
       "histogram": [
         6.56,
@@ -613,7 +613,7 @@
         -1.14,
         -1.59,
         -1.99,
-        -2.31
+        -2.0
       ]
     }
   },
