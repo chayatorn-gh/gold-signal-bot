@@ -74,6 +74,27 @@ RISK_PER_TRADE_PCT: float = 0.015       # 1.5% of capital risked per trade
 ATR_MULTIPLIER_SL: float = 2.0          # SL distance = ATR * this multiplier
 TP_RR_RATIO: float = 2.0                # Take-profit = SL distance * this ratio (1:2 R:R)
 
+# --- Signal confirmation (reduces false EMA-crossover alerts) ---
+# Before a raw EMA20/50 crossover is sent to Telegram, it must also be
+# confirmed by RSI (not already in the opposite extreme zone) AND MACD
+# histogram (momentum agreeing with the crossover direction). This does
+# NOT change the dashboard's continuous score -- only what gets alerted.
+REQUIRE_SIGNAL_CONFIRMATION: bool = True
+RSI_BUY_MAX: float = 70.0     # reject BUY if RSI already overbought
+RSI_SELL_MIN: float = 30.0    # reject SELL if RSI already oversold
+
+# --- Paper trading simulation (unified system, driven by the CONTINUOUS
+# dashboard score from build_dashboard_analysis -- not the discrete
+# Telegram EMA-crossover alert). One simulated position at a time. ---
+PAPER_TRADING_ENABLED: bool = True
+PAPER_MIN_SIGNAL_STRENGTH: int = 3    # min score strength (0-5) required to open a simulated position
+
+# --- Server-side history logs (committed to the repo, so history survives
+# across devices/browsers instead of living only in localStorage) ---
+SIGNAL_LOG_JSON_PATH: str = os.environ.get("SIGNAL_LOG_JSON_PATH", "docs/signal_log.json")
+TRADE_LOG_JSON_PATH: str = os.environ.get("TRADE_LOG_JSON_PATH", "docs/trade_log.json")
+MAX_LOG_ENTRIES: int = 1000
+
 # --- Trading hours guard (Asia/Bangkok, ICT = UTC+7) ---
 MARKET_TIMEZONE: str = "Asia/Bangkok"
 DAILY_PAUSE_START_HOUR: int = 3         # 03:00 ICT daily pause start (all days)
@@ -148,11 +169,14 @@ def load_last_processed_candle_time(path: str = STATE_FILE_PATH) -> Optional[pd.
 
 def save_state(candle_time: Optional[pd.Timestamp] = None,
                 last_signal: Optional["TradeSignal"] = None,
+                extra_fields: Optional[dict] = None,
                 path: str = STATE_FILE_PATH) -> None:
     """
     Persists state to the JSON state file, merging with what's already there
     so that saving a new candle_time doesn't wipe out a previously-saved
-    last_signal (and vice versa).
+    last_signal (and vice versa). `extra_fields` merges in any additional
+    top-level keys as-is (used for paper_position / paper_stats /
+    last_dashboard_signal, which don't need their own dataclass).
     """
     try:
         existing = load_state(path)
@@ -169,12 +193,75 @@ def save_state(candle_time: Optional[pd.Timestamp] = None,
                 "risk_amount_usd": last_signal.risk_amount_usd,
                 "rr_ratio": last_signal.rr_ratio,
             }
+        if extra_fields:
+            existing.update(extra_fields)
         existing["updated_at_utc"] = datetime.utcnow().isoformat()
         with open(path, "w", encoding="utf-8") as f:
             json.dump(existing, f, indent=2)
         logger.info("State saved to %s", path)
     except Exception as exc:
         logger.error("Failed to write state file (%s): %s", path, exc)
+
+
+# ==============================================================================
+# 3b. SERVER-SIDE HISTORY LOGS (docs/signal_log.json, docs/trade_log.json)
+#     Committed to the repo alongside docs/data.json, so signal history and
+#     paper-trade history are visible from ANY device/browser -- fixing the
+#     old behaviour where history lived only in the visiting browser's
+#     localStorage.
+# ==============================================================================
+
+def read_json_list(path: str) -> list:
+    """Reads a JSON array file, returning [] if missing/invalid."""
+    try:
+        if not os.path.exists(path):
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception as exc:
+        logger.warning("Failed to read %s -- treating as empty: %s", path, exc)
+        return []
+
+
+def write_json_list(path: str, items: list, cap: int = MAX_LOG_ENTRIES) -> None:
+    """Writes a JSON array file, capped to the most recent `cap` entries."""
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(items[:cap], f, indent=2, ensure_ascii=False)
+        logger.info("Log written to %s (%d entries)", path, min(len(items), cap))
+    except Exception as exc:
+        logger.error("Failed to write %s: %s", path, exc)
+
+
+def append_signal_log_entry(entry: dict, path: str = SIGNAL_LOG_JSON_PATH) -> None:
+    """Prepends a dashboard-signal-change event (newest first), capped."""
+    items = read_json_list(path)
+    items.insert(0, entry)
+    write_json_list(path, items)
+
+
+def append_trade_log_entry(trade: dict, stats: dict, path: str = TRADE_LOG_JSON_PATH) -> None:
+    """
+    Prepends a closed paper trade (newest first) into a {stats, trades}
+    object file (not a bare list, since we also want running stats stored
+    alongside the trade history).
+    """
+    try:
+        existing = {}
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        trades = existing.get("trades", [])
+        trades.insert(0, trade)
+        trades = trades[:MAX_LOG_ENTRIES]
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"stats": stats, "trades": trades}, f, indent=2, ensure_ascii=False)
+        logger.info("Trade log updated (%s): %d trades on record", path, len(trades))
+    except Exception as exc:
+        logger.error("Failed to write trade log (%s): %s", path, exc)
 
 
 # ==============================================================================
@@ -543,6 +630,42 @@ def detect_crossover_signal(df: pd.DataFrame) -> Optional[Literal["BUY", "SELL"]
 
 
 # ==============================================================================
+# 7b. SIGNAL CONFIRMATION FILTER (RSI + MACD must agree with the crossover
+#     direction before a Telegram alert is sent -- reduces whipsaw/false
+#     signals from a bare EMA crossover in choppy conditions)
+# ==============================================================================
+
+def check_signal_confirmation(
+    signal_type: Literal["BUY", "SELL"],
+    rsi_val: Optional[float],
+    macd_hist_val: Optional[float],
+) -> Tuple[bool, str]:
+    """
+    Confirms (or rejects) a raw EMA-crossover signal using RSI and MACD
+    histogram, both already computed by build_dashboard_analysis():
+      - BUY  requires RSI < RSI_BUY_MAX (not overbought) AND MACD histogram > 0 (bullish momentum)
+      - SELL requires RSI > RSI_SELL_MIN (not oversold) AND MACD histogram < 0 (bearish momentum)
+    Returns (confirmed: bool, human_readable_reason: str).
+    """
+    if rsi_val is None or macd_hist_val is None or pd.isna(rsi_val) or pd.isna(macd_hist_val):
+        return True, "RSI/MACD ยังไม่มีค่า -- ข้ามการยืนยัน ปล่อยผ่านสัญญาณเดิม"
+
+    if signal_type == "BUY":
+        if rsi_val >= RSI_BUY_MAX:
+            return False, f"RSI {rsi_val:.1f} เข้าเขต Overbought (>= {RSI_BUY_MAX:.0f}) -- ยกเลิกสัญญาณ BUY"
+        if macd_hist_val <= 0:
+            return False, f"MACD Histogram {macd_hist_val:.2f} ยังไม่เป็นขาขึ้น -- ยกเลิกสัญญาณ BUY"
+        return True, f"ยืนยัน BUY: RSI {rsi_val:.1f} (<{RSI_BUY_MAX:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาขึ้น)"
+
+    # SELL
+    if rsi_val <= RSI_SELL_MIN:
+        return False, f"RSI {rsi_val:.1f} เข้าเขต Oversold (<= {RSI_SELL_MIN:.0f}) -- ยกเลิกสัญญาณ SELL"
+    if macd_hist_val >= 0:
+        return False, f"MACD Histogram {macd_hist_val:.2f} ยังไม่เป็นขาลง -- ยกเลิกสัญญาณ SELL"
+    return True, f"ยืนยัน SELL: RSI {rsi_val:.1f} (>{RSI_SELL_MIN:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาลง)"
+
+
+# ==============================================================================
 # 8. RISK MANAGEMENT & POSITION SIZING
 # ==============================================================================
 
@@ -590,6 +713,122 @@ def build_trade_signal(
         risk_amount_usd=round(risk_amount_usd, 2),
         rr_ratio=TP_RR_RATIO,
     )
+
+
+# ==============================================================================
+# 8b. PAPER TRADING SIMULATION (unified system, driven by the CONTINUOUS
+#     dashboard score -- one simulated position open at a time). This is
+#     completely separate from the discrete Telegram EMA-crossover alert;
+#     it exists purely to show realistic win-rate / P&L tracking over time.
+# ==============================================================================
+
+def compute_paper_pnl_usd(position: dict, exit_price: float) -> float:
+    """
+    R-multiple based P/L: the SL distance always corresponds to losing
+    exactly `risk_amount_usd` (consistent with the real signal's position
+    sizing model), so P/L scales linearly with how far price moved
+    relative to that SL distance.
+    """
+    entry = position["entry_price"]
+    sl_distance = abs(entry - position["stop_loss"])
+    if sl_distance <= 0:
+        return 0.0
+    direction = position["direction"]
+    price_diff = (exit_price - entry) if direction == "BUY" else (entry - exit_price)
+    risk_amount_usd = position.get("risk_amount_usd", ACCOUNT_CAPITAL_USD * RISK_PER_TRADE_PCT)
+    return risk_amount_usd * (price_diff / sl_distance)
+
+
+def update_paper_trading(
+    state: dict,
+    analysis: dict,
+    current_price: float,
+    atr_value: Optional[float],
+    candle_time_iso: str,
+) -> Tuple[Optional[dict], dict, Optional[dict]]:
+    """
+    Manages ONE simulated position based on `analysis['signal']` /
+    `analysis['strength']` (the dashboard's continuous SMA/RSI/MACD/BB
+    score). Exits on SL hit, TP hit, or the score flipping to the opposite
+    direction; opens a new position when flat and the score is buy/sell
+    with sufficient strength.
+
+    Returns (open_position_or_None, updated_stats, newly_closed_trade_or_None).
+    """
+    position = state.get("paper_position")
+    stats = state.get("paper_stats") or {
+        "total_trades": 0, "wins": 0, "losses": 0, "total_pnl_usd": 0.0,
+    }
+    new_signal = analysis.get("signal", "hold")
+    strength = analysis.get("strength", 0)
+    closed_trade = None
+
+    if position:
+        direction = position["direction"]
+        hit_tp = (direction == "BUY" and current_price >= position["take_profit"]) or \
+                 (direction == "SELL" and current_price <= position["take_profit"])
+        hit_sl = (direction == "BUY" and current_price <= position["stop_loss"]) or \
+                 (direction == "SELL" and current_price >= position["stop_loss"])
+        signal_flip = (direction == "BUY" and new_signal == "sell") or \
+                      (direction == "SELL" and new_signal == "buy")
+
+        if hit_tp or hit_sl or signal_flip:
+            if hit_tp:
+                exit_price, reason = position["take_profit"], "tp"
+            elif hit_sl:
+                exit_price, reason = position["stop_loss"], "sl"
+            else:
+                exit_price, reason = current_price, "signal_flip"
+
+            pnl = compute_paper_pnl_usd(position, exit_price)
+            stats["total_trades"] = stats.get("total_trades", 0) + 1
+            if pnl >= 0:
+                stats["wins"] = stats.get("wins", 0) + 1
+            else:
+                stats["losses"] = stats.get("losses", 0) + 1
+            stats["total_pnl_usd"] = round(stats.get("total_pnl_usd", 0.0) + pnl, 2)
+
+            closed_trade = {
+                "direction": direction,
+                "entry_price": position["entry_price"],
+                "entry_time": position["entry_time"],
+                "exit_price": round(float(exit_price), 2),
+                "exit_time": candle_time_iso,
+                "exit_reason": reason,
+                "stop_loss": position["stop_loss"],
+                "take_profit": position["take_profit"],
+                "pnl_usd": round(pnl, 2),
+            }
+            position = None
+
+    if position is None and PAPER_TRADING_ENABLED and new_signal in ("buy", "sell") \
+            and strength >= PAPER_MIN_SIGNAL_STRENGTH and atr_value and atr_value > 0:
+        sl_distance = atr_value * ATR_MULTIPLIER_SL
+        risk_amount_usd = round(ACCOUNT_CAPITAL_USD * RISK_PER_TRADE_PCT, 2)
+        if new_signal == "buy":
+            direction = "BUY"
+            stop_loss = current_price - sl_distance
+            take_profit = current_price + sl_distance * TP_RR_RATIO
+        else:
+            direction = "SELL"
+            stop_loss = current_price + sl_distance
+            take_profit = current_price - sl_distance * TP_RR_RATIO
+        position = {
+            "direction": direction,
+            "entry_price": round(current_price, 2),
+            "entry_time": candle_time_iso,
+            "stop_loss": round(stop_loss, 2),
+            "take_profit": round(take_profit, 2),
+            "risk_amount_usd": risk_amount_usd,
+        }
+
+    total = stats.get("total_trades", 0)
+    stats["win_rate_pct"] = round(100 * stats.get("wins", 0) / total, 1) if total else 0.0
+    stats["current_balance_usd"] = round(ACCOUNT_CAPITAL_USD + stats.get("total_pnl_usd", 0.0), 2)
+
+    state["paper_position"] = position
+    state["paper_stats"] = stats
+    return position, stats, closed_trade
 
 
 # ==============================================================================
@@ -663,63 +902,86 @@ def send_telegram_alert(message: str) -> bool:
 
 def run_signal_cycle(
     last_processed_candle_time: Optional[pd.Timestamp],
-) -> Tuple[Optional[pd.Timestamp], Optional[TradeSignal], Optional[pd.DataFrame]]:
+) -> Tuple[Optional[pd.Timestamp], Optional[TradeSignal], Optional[pd.DataFrame], Optional[dict], Optional[dict]]:
     """
-    Executes one full fetch -> indicator -> signal -> notify cycle.
+    Executes one full fetch -> indicator -> signal -> confirm -> notify cycle.
     `last_processed_candle_time` is loaded from / saved to STATE_FILE_PATH
     by the caller, since each GitHub Actions run is a fresh process.
 
     Returns:
-        (updated_last_processed_candle_time, signal_if_any, fetched_dataframe_or_None)
-        The dataframe is returned too so the caller can reuse it for the
-        dashboard JSON without fetching Yahoo Finance a second time.
+        (updated_last_processed_candle_time, signal_if_sent, fetched_dataframe_or_None,
+         dashboard_analysis_or_None, confirmation_info_or_None)
+        The dataframe/analysis are returned too so the caller can reuse them
+        for the dashboard JSON + paper trading without recomputing.
     """
     df = fetch_price_data()
     if df is None:
         logger.warning("No data available this cycle; skipping.")
-        return last_processed_candle_time, None, None
+        return last_processed_candle_time, None, None, None, None
 
     df = apply_indicators(df)
 
     df_valid = df.dropna(subset=["ema_fast", "ema_slow", "atr"])
     if df_valid.empty:
         logger.warning("Not enough valid candles yet for indicator calculation.")
-        return last_processed_candle_time, None, df
+        return last_processed_candle_time, None, df, None, None
 
     latest_candle_time: pd.Timestamp = df_valid.index[-1]
 
-    # --- Anti-spam guard: only process each closed candle once ---
+    # --- Continuous dashboard score: always computed, independent of the
+    #     anti-spam guard below, since it drives the dashboard UI and the
+    #     paper-trading simulation on EVERY run, not just on new candles. ---
+    analysis = build_dashboard_analysis(df)
+
+    # --- Anti-spam guard: only evaluate a NEW Telegram alert once per closed candle ---
     if last_processed_candle_time is not None and latest_candle_time <= last_processed_candle_time:
         logger.info("Candle %s already processed. No new closed candle yet.", latest_candle_time)
-        return last_processed_candle_time, None, df
+        return last_processed_candle_time, None, df, analysis, None
 
-    signal_type = detect_crossover_signal(df)
+    raw_signal_type = detect_crossover_signal(df)
 
-    if signal_type is None:
+    if raw_signal_type is None:
         logger.info("No crossover signal on candle %s.", latest_candle_time)
-        return latest_candle_time, None, df
+        return latest_candle_time, None, df, analysis, None
+
+    # --- Confirmation filter: RSI + MACD must agree with the crossover
+    #     direction before we actually alert (reduces whipsaw/false signals) ---
+    confirmation_info: dict = {"raw_signal": raw_signal_type}
+    if REQUIRE_SIGNAL_CONFIRMATION:
+        confirmed, reason = check_signal_confirmation(
+            raw_signal_type, analysis.get("rsi"), analysis.get("histogram"),
+        )
+    else:
+        confirmed, reason = True, "การยืนยันสัญญาณถูกปิดใช้งาน (REQUIRE_SIGNAL_CONFIRMATION=False)"
+    confirmation_info["confirmed"] = confirmed
+    confirmation_info["reason"] = reason
+
+    if not confirmed:
+        logger.info("Crossover %s on candle %s REJECTED by confirmation filter: %s",
+                     raw_signal_type, latest_candle_time, reason)
+        return latest_candle_time, None, df, analysis, confirmation_info
 
     latest_row = df_valid.iloc[-1]
     entry_price = float(latest_row["Close"])
     atr_value = float(latest_row["atr"])
 
     signal = build_trade_signal(
-        signal_type=signal_type,
+        signal_type=raw_signal_type,
         candle_time=latest_candle_time,
         entry_price=entry_price,
         atr_value=atr_value,
     )
 
     logger.info(
-        "SIGNAL DETECTED: %s | Entry=%.2f SL=%.2f TP=%.2f Size=$%.2f",
+        "SIGNAL CONFIRMED & SENT: %s | Entry=%.2f SL=%.2f TP=%.2f Size=$%.2f | %s",
         signal.signal_type, signal.entry_price, signal.stop_loss,
-        signal.take_profit, signal.position_size_usd,
+        signal.take_profit, signal.position_size_usd, reason,
     )
 
     message = format_telegram_message(signal)
     send_telegram_alert(message)
 
-    return latest_candle_time, signal, df
+    return latest_candle_time, signal, df, analysis, confirmation_info
 
 
 # ==============================================================================
@@ -769,19 +1031,79 @@ def main() -> int:
             write_dashboard_json(existing_payload)
             return 0
 
-        updated_candle_time, signal, df = run_signal_cycle(last_processed_candle_time)
+        updated_candle_time, signal, df, analysis, confirmation_info = run_signal_cycle(last_processed_candle_time)
 
-        # Persist state only if it actually changed (avoids needless commits)
-        if updated_candle_time is not None and updated_candle_time != last_processed_candle_time:
-            save_state(candle_time=updated_candle_time, last_signal=signal)
-        elif signal is not None:
-            save_state(last_signal=signal)
+        state = load_state()
+        extra_fields: dict = {}
+        paper_summary: Optional[dict] = None
+
+        # --- Paper trading + signal-change log (uses the CONTINUOUS dashboard
+        #     score, computed on every run regardless of whether a new candle
+        #     or a confirmed Telegram alert occurred this cycle) ---
+        if analysis is not None and df is not None and not df.empty:
+            try:
+                current_price = analysis["current_price"]
+                atr_series = df["atr"].dropna()
+                atr_value = float(atr_series.iloc[-1]) if not atr_series.empty else None
+                candle_time_iso = df.index[-1].isoformat()
+
+                open_position, paper_stats, closed_trade = update_paper_trading(
+                    state, analysis, current_price, atr_value, candle_time_iso,
+                )
+                extra_fields["paper_position"] = open_position
+                extra_fields["paper_stats"] = paper_stats
+
+                if closed_trade is not None:
+                    append_trade_log_entry(closed_trade, paper_stats)
+                    logger.info("Paper trade closed: %s | P/L=$%.2f | reason=%s",
+                                closed_trade["direction"], closed_trade["pnl_usd"], closed_trade["exit_reason"])
+
+                paper_summary = {
+                    "open_position": open_position,
+                    "stats": paper_stats,
+                }
+
+                # --- Signal-change log: append only when the dashboard score
+                #     actually changes, so 1000 entries covers real history
+                #     rather than being flooded by unchanged 15-min snapshots ---
+                prev_dashboard_signal = state.get("last_dashboard_signal")
+                if analysis["signal"] != prev_dashboard_signal:
+                    append_signal_log_entry({
+                        "time_utc": datetime.utcnow().isoformat(),
+                        "candle_time": candle_time_iso,
+                        "signal": analysis["signal"],
+                        "strength": analysis.get("strength"),
+                        "price": current_price,
+                    })
+                extra_fields["last_dashboard_signal"] = analysis["signal"]
+                if confirmation_info is not None:
+                    extra_fields["last_confirmation"] = confirmation_info
+            except Exception as exc:
+                logger.error("Paper trading / signal log update failed: %s", exc)
+                logger.debug(traceback.format_exc())
+
+        # Persist state (candle time, last Telegram signal, paper trading, dashboard signal)
+        if extra_fields or (updated_candle_time is not None and updated_candle_time != last_processed_candle_time) or signal is not None:
+            save_state(
+                candle_time=updated_candle_time if updated_candle_time != last_processed_candle_time else None,
+                last_signal=signal,
+                extra_fields=extra_fields or None,
+            )
 
         # --- Build & write the dashboard JSON from the SAME fetched data ---
-        if df is not None and not df.empty:
+        if df is not None and not df.empty and analysis is not None:
             try:
-                analysis = build_dashboard_analysis(df)
-                state = load_state()
+                state = load_state()  # re-read so last_signal reflects what we just saved
+                trade_log = {}
+                if os.path.exists(TRADE_LOG_JSON_PATH):
+                    try:
+                        with open(TRADE_LOG_JSON_PATH, "r", encoding="utf-8") as f:
+                            trade_log = json.load(f)
+                    except Exception:
+                        trade_log = {}
+                if paper_summary is not None:
+                    paper_summary["recent_trades"] = trade_log.get("trades", [])[:10]
+
                 payload = {
                     "generated_at_utc": datetime.utcnow().isoformat(),
                     "market_time_ict": bangkok_now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -790,6 +1112,8 @@ def main() -> int:
                     "interval": INTERVAL,
                     "analysis": analysis,
                     "last_telegram_alert": state.get("last_signal"),
+                    "confirmation": confirmation_info or state.get("last_confirmation"),
+                    "paper_trading": paper_summary,
                 }
                 write_dashboard_json(payload)
             except Exception as exc:

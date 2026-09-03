@@ -99,12 +99,51 @@ TP_RR_RATIO: float = 2.0
 ## Two separate signal systems (by design)
 
 - **Telegram alerts** (`gold_signal_engine.py`): event-based — fires only
-  when EMA20 crosses EMA50 on a newly closed candle, with an ATR-based
-  stop-loss/take-profit and position size. This is what actually pings you.
+  when EMA20 crosses EMA50 on a newly closed candle **and** passes the
+  RSI/MACD confirmation filter (see below), with an ATR-based stop-loss/
+  take-profit and position size. This is what actually pings you.
 - **Dashboard score** (`docs/index.html` + `build_dashboard_analysis()`):
   continuous — a weighted buy/sell score from SMA20/50, RSI, MACD, and
-  Bollinger Bands, shown for visual context. It updates every run but
-  does **not** trigger Telegram messages by itself.
+  Bollinger Bands, shown for visual context. It updates every run and now
+  also drives the paper-trading simulation below.
+
+## Signal confirmation filter (fewer false EMA-crossover alerts)
+
+A raw EMA20/50 crossover on its own can whipsaw in choppy/sideways
+conditions. Before an alert is actually sent to Telegram, it's now checked
+against RSI and the MACD histogram:
+
+- **BUY** requires RSI below `RSI_BUY_MAX` (default 70 — not already
+  overbought) **and** MACD histogram > 0 (bullish momentum).
+- **SELL** requires RSI above `RSI_SELL_MIN` (default 30 — not already
+  oversold) **and** MACD histogram < 0 (bearish momentum).
+
+Rejected crossovers are logged (not sent) and the reason is shown on the
+dashboard under the Telegram card. Disable with
+`REQUIRE_SIGNAL_CONFIRMATION = False` in `gold_signal_engine.py` if you'd
+rather alert on every raw crossover again.
+
+## Paper trading simulation (educational, no real money)
+
+`update_paper_trading()` keeps one simulated position open at a time,
+driven entirely by the **continuous dashboard score** (not the Telegram
+alert): it opens a BUY/SELL when the score reaches `PAPER_MIN_SIGNAL_STRENGTH`
+(default 3/5), sizes SL/TP the same ATR-based way as a real signal, and
+closes on a TP hit, SL hit, or the score flipping direction. Every closed
+trade — entry/exit price, reason, and P/L in USD — is appended to
+`docs/trade_log.json` along with running win-rate/total P/L stats; the
+dashboard's "ระบบจำลองการเทรด" card renders this directly. Starting capital
+and risk-per-trade reuse `ACCOUNT_CAPITAL_USD` / `RISK_PER_TRADE_PCT`.
+
+## Server-side history (fixes "different device, no history")
+
+Previously, the dashboard's signal-history log lived only in the visiting
+browser's `localStorage`, so opening the dashboard on a different device or
+browser showed nothing. Now every dashboard-score change is appended to
+`docs/signal_log.json` (capped at 1000 entries) by the Python bot itself and
+committed to the repo alongside `docs/data.json` — the same history shows up
+everywhere the page is opened. `docs/trade_log.json` (paper trades) works
+the same way.
 
 ## Local testing
 

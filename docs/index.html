@@ -626,6 +626,74 @@
   .toast-title { font-size: 0.85rem; font-weight: 700; }
   .toast-msg { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
 
+  /* ===== MEGA ALERT BANNER (big, center-screen, hard to miss) ===== */
+  #megaAlertLayer {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 90px;
+    pointer-events: none;
+  }
+
+  .mega-alert {
+    pointer-events: all;
+    cursor: pointer;
+    width: min(92vw, 460px);
+    border-radius: 20px;
+    padding: 20px 24px;
+    text-align: center;
+    background: var(--card);
+    border: 3px solid var(--gold);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    animation: megaIn 0.35s cubic-bezier(.34,1.56,.64,1), megaShake 0.5s ease 0.35s, megaOut 0.5s ease 6.5s forwards;
+  }
+
+  .mega-alert.buy { border-color: var(--green); box-shadow: 0 20px 60px rgba(0,230,118,0.35); }
+  .mega-alert.sell { border-color: var(--red); box-shadow: 0 20px 60px rgba(255,68,68,0.35); }
+
+  @keyframes megaIn {
+    from { opacity: 0; transform: translateY(-40px) scale(0.85); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes megaShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  @keyframes megaOut {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to { opacity: 0; transform: translateY(-30px) scale(0.9); }
+  }
+
+  .mega-alert-icon { font-size: 3rem; animation: signalPulse 0.8s infinite; }
+  .mega-alert-title { font-size: 1.5rem; font-weight: 900; letter-spacing: 1px; margin-top: 4px; }
+  .mega-alert.buy .mega-alert-title { color: var(--green); }
+  .mega-alert.sell .mega-alert-title { color: var(--red); }
+  .mega-alert-sub { font-size: 0.9rem; color: var(--text); margin-top: 6px; line-height: 1.5; }
+  .mega-alert-tap { font-size: 0.68rem; color: var(--text2); margin-top: 10px; }
+
+  .sound-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .sound-toggle-btn.on { color: var(--gold); border-color: var(--gold-dark); }
+
   /* ===== STATUS INDICATOR ===== */
   .status-row {
     display: flex;
@@ -706,6 +774,52 @@
   .badge-sell { background: rgba(255,68,68,0.15); color: var(--red); }
   .badge-neutral { background: rgba(255,183,77,0.15); color: var(--orange); }
 
+  /* ===== PAPER TRADING ===== */
+  .paper-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .paper-stat {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .paper-stat-label { font-size: 0.65rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .paper-stat-value { font-size: 1rem; font-weight: 800; margin-top: 2px; }
+
+  .paper-position-box {
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .paper-position-box.buy { border-color: var(--green); background: rgba(0,230,118,0.08); }
+  .paper-position-box.sell { border-color: var(--red); background: rgba(255,68,68,0.08); }
+
+  .trade-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border-radius: 8px;
+    font-size: 0.75rem;
+    border-left: 3px solid var(--border);
+    margin-bottom: 6px;
+  }
+
+  .trade-row.win { border-left-color: var(--green); }
+  .trade-row.loss { border-left-color: var(--red); }
+
   /* ===== RESPONSIVE ===== */
   @media (max-width: 600px) {
     header { padding: 10px 12px; }
@@ -725,6 +839,8 @@
 
 <!-- Toast Container -->
 <div id="toast"></div>
+<!-- Mega Alert Banner Layer (big, center-screen, with sound) -->
+<div id="megaAlertLayer"></div>
 
 <!-- Header -->
 <header>
@@ -809,6 +925,9 @@
     <!-- Alert Log -->
     <div class="card">
       <div class="card-title">📋 ประวัติสัญญาณ</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin:-8px 0 10px">
+        เก็บฝั่งเซิร์ฟเวอร์ (signal_log.json) — เปิดจากเครื่องหรือเบราว์เซอร์ไหนก็เห็นประวัติเดิม
+      </div>
       <div class="alert-log" id="alertLog">
         <div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:20px">
           รอสัญญาณแรก...
@@ -914,6 +1033,35 @@
         <div id="lastAlertBox" style="font-size:0.8rem;color:var(--text2)">
           ยังไม่มีสัญญาณที่ส่งเข้า Telegram
         </div>
+        <div id="confirmBox" style="display:none;margin-top:8px;font-size:0.72rem;line-height:1.5;padding-top:8px;border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+    <!-- Paper Trading Simulation (server-side, driven by the continuous
+         dashboard score in build_dashboard_analysis(); one simulated
+         position at a time. Not real money -- educational P/L tracking.) -->
+    <div class="card">
+      <div class="card-title">💹 ระบบจำลองการเทรด (Paper Trading)</div>
+      <div class="paper-stats-grid">
+        <div class="paper-stat">
+          <div class="paper-stat-label">Win Rate</div>
+          <div class="paper-stat-value" id="paperWinRate">-</div>
+        </div>
+        <div class="paper-stat">
+          <div class="paper-stat-label">เทรดทั้งหมด</div>
+          <div class="paper-stat-value" id="paperTotalTrades">-</div>
+        </div>
+        <div class="paper-stat">
+          <div class="paper-stat-label">กำไร/ขาดทุนรวม</div>
+          <div class="paper-stat-value" id="paperTotalPnl">-</div>
+        </div>
+      </div>
+      <div id="paperPositionBox" class="paper-position-box">ยังไม่มีโพซิชันจำลองที่เปิดอยู่</div>
+      <div style="font-size:0.7rem;color:var(--text2);margin-bottom:8px">เทรดล่าสุด</div>
+      <div id="paperTradesList"></div>
+      <div style="font-size:0.65rem;color:var(--text2);margin-top:8px;line-height:1.5">
+        ⚠️ เป็นการจำลองเพื่อการศึกษาเท่านั้น ไม่ใช่การเทรดจริง เริ่มต้นด้วยเงินทุนสมมติ
+        <span id="paperStartCapital">$1,000</span>
       </div>
     </div>
 
@@ -943,9 +1091,16 @@
           <span>รีเฟรชตอนนี้</span>
         </button>
         <button class="btn btn-test" style="flex:1" onclick="clearLog()">
-          🗑️ ล้างประวัติ
+          🔄 รีเฟรชประวัติ
         </button>
       </div>
+
+      <button class="sound-toggle-btn" id="soundToggleBtn" onclick="toggleSound()">
+        🔇 เปิดเสียงแจ้งเตือน (ต้องกดก่อน 1 ครั้ง)
+      </button>
+      <button class="sound-toggle-btn" id="notifToggleBtn" onclick="requestNotifPermission()">
+        🔔 เปิดแจ้งเตือนบนเดสก์ท็อป
+      </button>
 
     </div>
 
@@ -959,16 +1114,20 @@
   // ===========================
   // CONFIG
   // ===========================
-  // data.json is written by gold_signal_engine.py (via GitHub Actions) and
-  // committed right next to this HTML file, so a relative path works both
-  // locally and on GitHub Pages.
+  // data.json / signal_log.json / trade_log.json are all written by
+  // gold_signal_engine.py (via GitHub Actions) and committed right next to
+  // this HTML file, so relative paths work both locally and on GitHub
+  // Pages. This is server-side history -- the SAME data shows up no matter
+  // which device or browser opens this page (unlike the old localStorage-only log).
   const DATA_URL = './data.json';
-  const REFRESH_MS = 60 * 1000; // re-fetch data.json every 60s (backend updates every 15 min)
-  const LOG_STORAGE_KEY = 'goldSignalAlertLog';
-  const PREV_SIGNAL_KEY = 'goldSignalPrevSignal';
+  const SIGNAL_LOG_URL = './signal_log.json';
+  const TRADE_LOG_URL = './trade_log.json';
+  const REFRESH_MS = 60 * 1000; // re-fetch every 60s (backend updates every 15 min)
 
   let priceChart, rsiChart, macdChart;
   let latestData = null;
+  let lastSeenSignalLogTime = null; // in-memory only, just to avoid re-toasting the same entry within one page session
+  let lastSeenTelegramAlertKey = null; // in-memory only, avoids re-firing the mega alert for the same confirmed signal
 
   // ===========================
   // FORMAT HELPERS (USD, since GC=F / gold futures are quoted in USD/oz)
@@ -986,6 +1145,18 @@
   // ===========================
   // DATA FETCH
   // ===========================
+  // Fetches a JSON file but never throws -- returns `fallback` on any
+  // failure (missing file, e.g. before the bot's first run, is expected).
+  async function fetchJsonSafe(url, fallback) {
+    try {
+      const res = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return fallback;
+      return await res.json();
+    } catch (err) {
+      return fallback;
+    }
+  }
+
   async function loadData() {
     try {
       const res = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
@@ -995,6 +1166,13 @@
       renderAll(data);
       document.getElementById('sysDot').className = 'status-dot';
       document.getElementById('sysStatus').textContent = 'ระบบทำงานปกติ — เชื่อมต่อบอทสำเร็จ';
+
+      // --- Server-side history (visible from any device/browser) ---
+      const signalLog = await fetchJsonSafe(SIGNAL_LOG_URL, []);
+      renderSignalLog(signalLog);
+
+      const tradeLog = await fetchJsonSafe(TRADE_LOG_URL, { stats: null, trades: [] });
+      renderPaperTrading(data.paper_trading, tradeLog);
     } catch (err) {
       console.error('Failed to load data.json:', err);
       document.getElementById('sysDot').className = 'status-dot off';
@@ -1134,8 +1312,35 @@
         <div>Size: ${fmt(lastAlert.position_size_usd)} &nbsp;|&nbsp; Risk: ${fmt(lastAlert.risk_amount_usd)}</div>
         <div style="margin-top:4px;color:var(--text2);font-size:0.72rem">แท่งเทียน: ${lastAlert.candle_time || '-'}</div>
       `;
+
+      // This is the REAL, confirmed signal (already passed RSI/MACD filter
+      // and actually got sent to Telegram) -- fire the loudest version of
+      // the alert, but only once per unique signal within this page session.
+      const alertKey = `${lastAlert.signal_type}|${lastAlert.candle_time}`;
+      if (lastSeenTelegramAlertKey !== null && alertKey !== lastSeenTelegramAlertKey) {
+        fireMegaAlert(lastAlert.signal_type === 'BUY' ? 'buy' : 'sell', {
+          title: `✅ ยืนยันแล้ว! ${lastAlert.signal_type} ส่งเข้า Telegram`,
+          subtitle: `Entry ${fmt(lastAlert.entry_price)} • SL ${fmt(lastAlert.stop_loss)} • TP ${fmt(lastAlert.take_profit)}`,
+        });
+      }
+      lastSeenTelegramAlertKey = alertKey;
     } else {
       alertBox.textContent = 'ยังไม่มีสัญญาณที่ส่งเข้า Telegram';
+    }
+
+    // --- Confirmation filter feedback (RSI+MACD must agree with an EMA
+    //     crossover before it's actually sent -- shows the last check either way) ---
+    const confirmBox = document.getElementById('confirmBox');
+    const confirmation = data.confirmation;
+    if (confirmBox) {
+      if (confirmation && confirmation.raw_signal) {
+        const ok = confirmation.confirmed;
+        confirmBox.style.display = 'block';
+        confirmBox.style.color = ok ? 'var(--green)' : 'var(--orange)';
+        confirmBox.innerHTML = `${ok ? '✅' : '🚫'} <b>${confirmation.raw_signal}</b> crossover: ${confirmation.reason || ''}`;
+      } else {
+        confirmBox.style.display = 'none';
+      }
     }
 
     // --- System status ---
@@ -1150,9 +1355,6 @@
 
     // --- Charts ---
     renderCharts(history);
-
-    // --- Detect a NEW dashboard signal (continuous score system) for the local log/toast ---
-    checkForNewDashboardSignal(signal, current);
   }
 
   // ===========================
@@ -1258,18 +1460,206 @@
   }
 
   // ===========================
-  // LOCAL SIGNAL-CHANGE LOG (client-side only; the REAL alert is Telegram,
-  // sent server-side. This just visually logs when the dashboard's own
-  // continuous buy/sell/hold score changes between page refreshes.)
+  // SERVER-SIDE SIGNAL LOG (docs/signal_log.json, written by
+  // gold_signal_engine.py and committed to the repo every run a dashboard
+  // signal change happens). Re-rendered from scratch on every refresh, so
+  // it's identical no matter which device/browser opens this page.
   // ===========================
-  function checkForNewDashboardSignal(signal, price) {
-    if (signal === 'hold') return;
-    const prevSignal = localStorage.getItem(PREV_SIGNAL_KEY);
-    if (signal === prevSignal) return;
-    localStorage.setItem(PREV_SIGNAL_KEY, signal);
+  function renderSignalLog(entries) {
+    const log = document.getElementById('alertLog');
+    if (!entries || !entries.length) {
+      log.innerHTML = `<div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:20px">รอสัญญาณแรก...</div>`;
+      return;
+    }
 
-    showToast(signal, price);
-    addLog(signal, `สัญญาณเปลี่ยนเป็น ${signal.toUpperCase()} ที่ราคา ${fmt(price)}`);
+    // Alert only for an entry newer than the last one we've already shown
+    // in THIS page session (in-memory only -- avoids re-alerting on every
+    // 60s refresh without needing localStorage).
+    const newest = entries[0];
+    if (newest && newest.time_utc && newest.time_utc !== lastSeenSignalLogTime) {
+      if (lastSeenSignalLogTime !== null && newest.signal !== 'hold') {
+        showToast(newest.signal, newest.price);
+        fireMegaAlert(newest.signal, {
+          title: `คะแนนสัญญาณเปลี่ยนเป็น ${newest.signal.toUpperCase()}`,
+          subtitle: `ราคา ${fmt(newest.price)} • ความแรง ${newest.strength ?? '-'}/5 (คะแนน dashboard เท่านั้น ยังไม่ใช่สัญญาณยืนยันที่ส่ง Telegram)`,
+        });
+      }
+      lastSeenSignalLogTime = newest.time_utc;
+    }
+
+    log.innerHTML = entries.slice(0, 30).map(e => {
+      const type = e.signal === 'buy' ? 'buy' : e.signal === 'sell' ? 'sell' : 'info';
+      const label = e.signal === 'buy' ? '🚀 BUY' : e.signal === 'sell' ? '📉 SELL' : 'ℹ️ HOLD';
+      const time = e.time_utc ? new Date(e.time_utc + 'Z').toLocaleTimeString('th-TH') : '-';
+      const color = type === 'buy' ? 'var(--green)' : type === 'sell' ? 'var(--red)' : 'var(--blue)';
+      return `
+        <div class="alert-item ${type}">
+          <span class="alert-time">${time}</span>
+          <span class="alert-msg" style="color:${color}">
+            ${label}: สัญญาณเปลี่ยนเป็น ${(e.signal || '').toUpperCase()} ที่ราคา ${fmt(e.price)} (ความแรง ${e.strength ?? '-'})
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  // ===========================
+  // PAPER TRADING CARD
+  // ===========================
+  function renderPaperTrading(paperTrading, tradeLog) {
+    const stats = (paperTrading && paperTrading.stats) || (tradeLog && tradeLog.stats) || null;
+    const position = paperTrading ? paperTrading.open_position : null;
+    const trades = (tradeLog && tradeLog.trades) || (paperTrading && paperTrading.recent_trades) || [];
+
+    document.getElementById('paperWinRate').textContent = stats ? `${stats.win_rate_pct ?? 0}%` : '-';
+    const totalEl = document.getElementById('paperTotalTrades');
+    totalEl.textContent = stats ? (stats.total_trades ?? 0) : '-';
+
+    const pnlEl = document.getElementById('paperTotalPnl');
+    const pnl = stats ? (stats.total_pnl_usd ?? 0) : null;
+    pnlEl.textContent = pnl === null ? '-' : `${pnl >= 0 ? '+' : ''}${fmt(pnl)}`;
+    pnlEl.style.color = pnl === null ? 'var(--text)' : (pnl >= 0 ? 'var(--green)' : 'var(--red)');
+
+    if (stats && stats.starting_capital_usd == null) {
+      // fall back label uses ACCOUNT_CAPITAL_USD baked into balance calc server-side
+    }
+    document.getElementById('paperStartCapital').textContent = fmt(1000);
+
+    const posBox = document.getElementById('paperPositionBox');
+    if (position) {
+      const cls = position.direction === 'BUY' ? 'buy' : 'sell';
+      posBox.className = `paper-position-box ${cls}`;
+      posBox.innerHTML = `
+        <div style="font-weight:700;color:${cls === 'buy' ? 'var(--green)' : 'var(--red)'};margin-bottom:4px">
+          ${cls === 'buy' ? '🟢 BUY' : '🔴 SELL'} @ ${fmt(position.entry_price)} (เปิดอยู่)
+        </div>
+        <div>SL: ${fmt(position.stop_loss)} &nbsp;|&nbsp; TP: ${fmt(position.take_profit)}</div>
+        <div style="color:var(--text2);font-size:0.7rem;margin-top:2px">เปิดเมื่อ: ${position.entry_time || '-'}</div>
+      `;
+    } else {
+      posBox.className = 'paper-position-box';
+      posBox.textContent = 'ยังไม่มีโพซิชันจำลองที่เปิดอยู่ — รอสัญญาณคะแนน (strength ≥ 3) ครั้งถัดไป';
+    }
+
+    const listEl = document.getElementById('paperTradesList');
+    if (!trades.length) {
+      listEl.innerHTML = `<div style="text-align:center;color:var(--text2);font-size:0.75rem;padding:10px">ยังไม่มีเทรดที่ปิดแล้ว</div>`;
+      return;
+    }
+    const reasonLabel = { tp: 'TP', sl: 'SL', signal_flip: 'Flip' };
+    listEl.innerHTML = trades.slice(0, 10).map(t => {
+      const win = t.pnl_usd >= 0;
+      return `
+        <div class="trade-row ${win ? 'win' : 'loss'}">
+          <span>${t.direction === 'BUY' ? '🟢' : '🔴'} ${fmt(t.entry_price)} → ${fmt(t.exit_price)} <span style="color:var(--text2)">(${reasonLabel[t.exit_reason] || t.exit_reason})</span></span>
+          <span style="font-weight:700;color:${win ? 'var(--green)' : 'var(--red)'}">${win ? '+' : ''}${fmt(t.pnl_usd)}</span>
+        </div>`;
+    }).join('');
+  }
+
+  // ===========================
+  // SOUND ALERTS (Web Audio API -- no external audio file needed).
+  // Browsers block audio until a user gesture unlocks it, so soundEnabled
+  // stays false until the user taps "เปิดเสียงแจ้งเตือน" once.
+  // ===========================
+  let audioCtx = null;
+  let soundEnabled = false;
+
+  function toggleSound() {
+    const btn = document.getElementById('soundToggleBtn');
+    if (!soundEnabled) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        soundEnabled = true;
+        btn.classList.add('on');
+        btn.textContent = '🔊 เสียงแจ้งเตือน: เปิดอยู่';
+        playBeep('buy'); // quick confirmation beep so the user knows it worked
+      } catch (e) {
+        showInfoToast('เบราว์เซอร์นี้ไม่รองรับเสียงแจ้งเตือน');
+      }
+    } else {
+      soundEnabled = false;
+      btn.classList.remove('on');
+      btn.textContent = '🔇 เปิดเสียงแจ้งเตือน (ต้องกดก่อน 1 ครั้ง)';
+    }
+  }
+
+  function playBeep(signal) {
+    if (!soundEnabled || !audioCtx) return;
+    // BUY = two short ascending beeps, SELL = two short descending beeps
+    const now = audioCtx.currentTime;
+    const freqs = signal === 'buy' ? [660, 880] : [660, 440];
+    freqs.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const t0 = now + i * 0.22;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.35, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.2);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.22);
+    });
+  }
+
+  // ===========================
+  // DESKTOP NOTIFICATIONS (works even when the tab is in the background /
+  // minimized -- most visible option available on the web)
+  // ===========================
+  function requestNotifPermission() {
+    const btn = document.getElementById('notifToggleBtn');
+    if (!('Notification' in window)) {
+      showInfoToast('เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนบนเดสก์ท็อป');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      showInfoToast('เปิดแจ้งเตือนบนเดสก์ท็อปอยู่แล้ว');
+      btn.classList.add('on');
+      btn.textContent = '🔔 แจ้งเตือนบนเดสก์ท็อป: เปิดอยู่';
+      return;
+    }
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') {
+        btn.classList.add('on');
+        btn.textContent = '🔔 แจ้งเตือนบนเดสก์ท็อป: เปิดอยู่';
+        new Notification('เปิดแจ้งเตือนสำเร็จ', { body: 'จะแจ้งเตือนทันทีที่มีสัญญาณ BUY/SELL' });
+      } else {
+        showInfoToast('เบราว์เซอร์บล็อกการแจ้งเตือน — เปิดสิทธิ์ในตั้งค่าเว็บไซต์');
+      }
+    });
+  }
+
+  function sendDesktopNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification(title, { body, tag: 'gold-signal' }); } catch (e) { /* ignore */ }
+    }
+  }
+
+  // ===========================
+  // MEGA ALERT BANNER -- big, center-screen, animated, auto-dismisses
+  // after 7s or on click. This is the main "ชัดเจนกว่านี้" upgrade: sound +
+  // big visual + desktop notification all fire together.
+  // ===========================
+  function fireMegaAlert(signal, { title, subtitle } = {}) {
+    playBeep(signal);
+    sendDesktopNotification(
+      signal === 'buy' ? '🚀 สัญญาณ BUY' : '📉 สัญญาณ SELL',
+      subtitle || '',
+    );
+
+    const layer = document.getElementById('megaAlertLayer');
+    const el = document.createElement('div');
+    el.className = `mega-alert ${signal}`;
+    el.innerHTML = `
+      <div class="mega-alert-icon">${signal === 'buy' ? '🚀' : '📉'}</div>
+      <div class="mega-alert-title">${title || (signal === 'buy' ? 'สัญญาณ BUY' : 'สัญญาณ SELL')}</div>
+      <div class="mega-alert-sub">${subtitle || ''}</div>
+      <div class="mega-alert-tap">แตะเพื่อปิด</div>`;
+    el.onclick = () => el.remove();
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 7000);
   }
 
   function showToast(signal, price) {
@@ -1302,54 +1692,12 @@
     setTimeout(() => item.remove(), 4000);
   }
 
-  function addLog(type, msg) {
-    const log = document.getElementById('alertLog');
-    if (log.children.length === 1 && log.children[0].style.textAlign === 'center') {
-      log.innerHTML = '';
-    }
-    const item = document.createElement('div');
-    item.className = `alert-item ${type}`;
-    const time = new Date().toLocaleTimeString('th-TH');
-    item.innerHTML = `
-      <span class="alert-time">${time}</span>
-      <span class="alert-msg" style="color:${type === 'buy' ? 'var(--green)' : type === 'sell' ? 'var(--red)' : 'var(--blue)'}">
-        ${type === 'buy' ? '🚀 BUY' : type === 'sell' ? '📉 SELL' : 'ℹ️ INFO'}: ${msg}
-      </span>`;
-    log.insertBefore(item, log.firstChild);
-    while (log.children.length > 30) log.removeChild(log.lastChild);
-
-    // Persist a lightweight copy so the log survives a page reload
-    try {
-      const saved = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
-      saved.unshift({ type, msg, time });
-      localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(saved.slice(0, 30)));
-    } catch (e) { /* localStorage unavailable -- ignore */ }
-  }
-
-  function restoreLog() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]');
-      if (!saved.length) return;
-      const log = document.getElementById('alertLog');
-      log.innerHTML = '';
-      saved.forEach(entry => {
-        const item = document.createElement('div');
-        item.className = `alert-item ${entry.type}`;
-        item.innerHTML = `
-          <span class="alert-time">${entry.time}</span>
-          <span class="alert-msg" style="color:${entry.type === 'buy' ? 'var(--green)' : entry.type === 'sell' ? 'var(--red)' : 'var(--blue)'}">
-            ${entry.type === 'buy' ? '🚀 BUY' : entry.type === 'sell' ? '📉 SELL' : 'ℹ️ INFO'}: ${entry.msg}
-          </span>`;
-        log.appendChild(item);
-      });
-    } catch (e) { /* ignore */ }
-  }
-
+  // History now lives server-side (docs/signal_log.json, committed by the
+  // bot), so there's nothing meaningful to "clear" from the browser --
+  // this just re-fetches, which is what the user actually wants here.
   function clearLog() {
-    document.getElementById('alertLog').innerHTML = `
-      <div style="text-align:center;color:var(--text2);font-size:0.8rem;padding:20px">ล้างประวัติแล้ว</div>`;
-    localStorage.removeItem(LOG_STORAGE_KEY);
-    localStorage.removeItem(PREV_SIGNAL_KEY);
+    showInfoToast('ประวัติเก็บฝั่งเซิร์ฟเวอร์แล้ว ปุ่มนี้จะรีเฟรชข้อมูลล่าสุดแทน');
+    loadData();
   }
 
   function setTimeframe(btn, tf) {
@@ -1361,7 +1709,11 @@
   // INIT
   // ===========================
   function init() {
-    restoreLog();
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const btn = document.getElementById('notifToggleBtn');
+      btn.classList.add('on');
+      btn.textContent = '🔔 แจ้งเตือนบนเดสก์ท็อป: เปิดอยู่';
+    }
     loadData();
     setInterval(loadData, REFRESH_MS);
   }
@@ -1372,6 +1724,8 @@
   window.clearLog = clearLog;
   window.setTimeframe = setTimeframe;
   window.manualRefresh = manualRefresh;
+  window.toggleSound = toggleSound;
+  window.requestNotifPermission = requestNotifPermission;
 
 })();
 </script>
