@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-02T21:15:00-04:00",
-  "updated_at_utc": "2026-09-03T01:33:10.150656",
+  "last_processed_candle_time": "2026-09-03T03:00:00-04:00",
+  "updated_at_utc": "2026-09-03T07:16:04.640885",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-08-31T22:45:00-04:00",
@@ -10,5 +10,15 @@
     "position_size_usd": 1000.0,
     "risk_amount_usd": 15.0,
     "rr_ratio": 2.0
-  }
+  },
+  "paper_position": null,
+  "paper_stats": {
+    "total_trades": 0,
+    "wins": 0,
+    "losses": 0,
+    "total_pnl_usd": 0.0,
+    "win_rate_pct": 0.0,
+    "current_balance_usd": 1000.0
+  },
+  "last_dashboard_signal": "hold"
 }
