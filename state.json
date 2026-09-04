@@ -1,17 +1,24 @@
 {
-  "last_processed_candle_time": "2026-09-04T03:15:00-04:00",
-  "updated_at_utc": "2026-09-04T07:31:56.108853",
+  "last_processed_candle_time": "2026-09-04T03:30:00-04:00",
+  "updated_at_utc": "2026-09-04T07:54:52.614441",
   "last_signal": {
-    "signal_type": "SELL",
-    "candle_time": "2026-09-04T02:30:00-04:00",
-    "entry_price": 4511.8,
-    "stop_loss": 4524.72,
-    "take_profit": 4485.96,
+    "signal_type": "BUY",
+    "candle_time": "2026-09-04T03:30:00-04:00",
+    "entry_price": 4532.0,
+    "stop_loss": 4517.64,
+    "take_profit": 4560.71,
     "position_size_usd": 1000.0,
     "risk_amount_usd": 15.0,
     "rr_ratio": 2.0
   },
-  "paper_position": null,
+  "paper_position": {
+    "direction": "SELL",
+    "entry_price": 4532.0,
+    "entry_time": "2026-09-04T03:30:00-04:00",
+    "stop_loss": 4546.36,
+    "take_profit": 4503.29,
+    "risk_amount_usd": 15.0
+  },
   "paper_stats": {
     "total_trades": 2,
     "wins": 1,
@@ -22,8 +29,8 @@
   },
   "last_dashboard_signal": "sell",
   "last_confirmation": {
-    "raw_signal": "SELL",
+    "raw_signal": "BUY",
     "confirmed": true,
-    "reason": "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 SELL: RSI 37.1 (>30) \u0e41\u0e25\u0e30 MACD Histogram -0.36 (\u0e02\u0e32\u0e25\u0e07)"
+    "reason": "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 BUY: RSI 67.3 (<70) \u0e41\u0e25\u0e30 MACD Histogram 1.24 (\u0e02\u0e32\u0e02\u0e36\u0e49\u0e19)"
   }
 }
