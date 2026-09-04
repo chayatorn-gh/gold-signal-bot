@@ -1,12 +1,12 @@
 {
-  "last_processed_candle_time": "2026-09-04T02:00:00-04:00",
-  "updated_at_utc": "2026-09-04T06:19:53.162837",
+  "last_processed_candle_time": "2026-09-04T02:30:00-04:00",
+  "updated_at_utc": "2026-09-04T06:46:54.751861",
   "last_signal": {
     "signal_type": "SELL",
-    "candle_time": "2026-08-31T22:45:00-04:00",
-    "entry_price": 4478.2,
-    "stop_loss": 4493.27,
-    "take_profit": 4448.05,
+    "candle_time": "2026-09-04T02:30:00-04:00",
+    "entry_price": 4511.8,
+    "stop_loss": 4524.72,
+    "take_profit": 4485.96,
     "position_size_usd": 1000.0,
     "risk_amount_usd": 15.0,
     "rr_ratio": 2.0
@@ -20,5 +20,10 @@
     "win_rate_pct": 50.0,
     "current_balance_usd": 992.22
   },
-  "last_dashboard_signal": "sell"
+  "last_dashboard_signal": "sell",
+  "last_confirmation": {
+    "raw_signal": "SELL",
+    "confirmed": true,
+    "reason": "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 SELL: RSI 37.1 (>30) \u0e41\u0e25\u0e30 MACD Histogram -0.36 (\u0e02\u0e32\u0e25\u0e07)"
+  }
 }
