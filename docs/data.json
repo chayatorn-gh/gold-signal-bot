@@ -1,23 +1,23 @@
 {
-  "generated_at_utc": "2026-09-08T17:41:29.225115",
-  "market_time_ict": "2026-09-09 00:41:28",
+  "generated_at_utc": "2026-09-08T17:54:52.803352",
+  "market_time_ict": "2026-09-09 00:54:52",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
   "analysis": {
-    "signal": "hold",
+    "signal": "sell",
     "strength": 2,
-    "buy_score": 2,
-    "sell_score": 3,
-    "current_price": 4439.7,
-    "ma20": 4442.37,
-    "ma50": 4444.31,
-    "rsi": 50.47,
-    "macd": -2.19,
-    "macd_signal": -2.26,
-    "histogram": 0.08,
-    "bb_upper": 4453.46,
-    "bb_lower": 4431.28,
+    "buy_score": 1,
+    "sell_score": 5,
+    "current_price": 4430.3,
+    "ma20": 4441.9,
+    "ma50": 4444.12,
+    "rsi": 41.14,
+    "macd": -2.94,
+    "macd_signal": -2.41,
+    "histogram": -0.52,
+    "bb_upper": 4454.2,
+    "bb_lower": 4429.6,
     "conditions": [
       {
         "name": "MA20 < MA50 (Death Cross)",
@@ -28,12 +28,12 @@
         "badge": "sell"
       },
       {
-        "name": "RSI 50.5 (Neutral)",
+        "name": "RSI 41.1 (Weak Bear)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram +0.1",
-        "badge": "buy"
+        "name": "MACD Histogram -0.5",
+        "badge": "sell"
       },
       {
         "name": "ราคาอยู่ใน Bollinger Band",
@@ -203,7 +203,7 @@
         4438.3,
         4440.3,
         4438.9,
-        4439.7
+        4430.3
       ],
       "ma20": [
         4489.03,
@@ -285,7 +285,7 @@
         4442.58,
         4442.8,
         4442.43,
-        4442.37
+        4441.9
       ],
       "ma50": [
         4506.71,
@@ -367,7 +367,7 @@
         4446.66,
         4445.83,
         4444.98,
-        4444.31
+        4444.12
       ],
       "rsi": [
         38.33,
@@ -449,7 +449,7 @@
         42.66,
         49.06,
         48.38,
-        50.47
+        41.14
       ],
       "macd": [
         -12.25,
@@ -531,7 +531,7 @@
         -2.52,
         -2.35,
         -2.31,
-        -2.19
+        -2.94
       ],
       "histogram": [
         0.17,
@@ -613,7 +613,7 @@
         -0.26,
         -0.08,
         -0.03,
-        0.08
+        -0.52
       ]
     }
   },
