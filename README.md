@@ -170,6 +170,90 @@ revived with a new token — LINE's own guidance is to migrate to the
 Messaging API instead. This project uses **Telegram** for all alerts
 instead, which remains free and actively maintained.
 
+## What changed in this update
+
+You reported three problems: inaccurate/whipsaw signals, alerts arriving
+late or not at all, and a dashboard that doesn't reflect reality. Here's
+what was actually wrong and what changed:
+
+### 1. Alerts silently stopped for days — and nothing told you
+The root cause: if `fetch_price_data()` failed (Yahoo Finance rate-limits
+or blocks intraday requests fairly often) or the script hit any unhandled
+exception, it logged a warning and exited with status 0. The GitHub
+Actions run still shows a green checkmark, so there was **no signal
+anywhere** that the bot had actually stopped working — you'd only notice
+when you checked the dashboard and saw stale data.
+- `fetch_price_data()` and `send_telegram_alert()` now retry (3 attempts,
+  backoff) before giving up, so a single network blip no longer costs a
+  cycle or a missed alert.
+- The engine now tracks consecutive failures across runs. After 3 in a
+  row (~45 min), it sends you **one** Telegram message telling you it's
+  down, and one more when it recovers — it does not spam you every run.
+
+### 2. Whipsaw signals in choppy conditions
+The existing RSI/MACD confirmation filter checks *direction* but not
+whether a real trend exists at all. Added an **ADX trend-strength
+filter**: a crossover now also needs ADX ≥ 20 (configurable via
+`ADX_MIN_TREND_STRENGTH`) to be alerted, rejecting crossovers that fire
+in a flat, directionless market — the classic whipsaw scenario. Disable
+with `REQUIRE_ADX_FILTER = False` if you'd rather not have it. ADX also
+now shows on the dashboard's condition list so you can see why a
+crossover was accepted or rejected.
+
+### 3. Dashboard didn't reflect reality
+The dashboard showed "ระบบทำงานปกติ" (working normally) as long as
+`data.json` loaded at all — even if that file was 6 days old. It now
+compares `generated_at_utc` to the current time: if the market is open
+and the data is more than 25 minutes stale, the status dot turns orange
+and the banner tells you the bot may be down, instead of quietly
+displaying old numbers as if they were current.
+
+### Also worth knowing
+GitHub Actions' `cron` schedule is best-effort, not guaranteed —
+GitHub can delay scheduled runs by several minutes during high platform
+load, and there's nothing in this repo that can fix that; it's a
+platform limitation. If you need tighter timing than GitHub's cron
+provides, trigger the workflow externally via `workflow_dispatch` (e.g.
+from a free service like cron-job.org calling the GitHub Actions API)
+instead of relying solely on `schedule`.
+
+## Round 2: accuracy validation + trend filter
+
+### 4. Multi-timeframe (1H) trend filter
+RSI/MACD/ADX confirm direction and trend *strength*, but not whether the
+15m crossover agrees with the bigger picture. A common cause of losing
+whipsaw trades is a 15m BUY signal firing in the middle of a 1H
+downtrend. Added `calculate_htf_trend()`: it resamples the SAME
+already-fetched 15m candles up to 1H (no extra API call, so no added
+rate-limit risk) and derives a trend direction from an EMA20/EMA50
+crossover on that timeframe. A BUY is only confirmed when the 1H trend
+is up; a SELL only when it's down. Toggle with `REQUIRE_HTF_TREND_FILTER`,
+tune with `HTF_RESAMPLE_RULE` / `HTF_TREND_EMA_FAST` / `HTF_TREND_EMA_SLOW`.
+Shows on the dashboard as a "เทรนด์ 1H" condition badge.
+
+### 5. `backtest.py` -- see real numbers before trusting the parameters
+All the filter thresholds (ADX ≥ 20, RSI 70/30, EMA 20/50, 1H trend) are
+industry-standard defaults, not values tuned against this specific
+instrument's actual behavior. `backtest.py` runs the strategy against
+real historical Yahoo Finance data and prints win rate, total R, and
+max drawdown for both the raw EMA crossover and the fully-filtered
+version, side by side, so you can see whether the filters are actually
+helping instead of taking it on faith.
+
+```bash
+pip install -r requirements.txt
+python backtest.py                                   # GC=F, 15m, last 60 days (yfinance's max for 15m)
+python backtest.py --interval 1h --period 2y          # longer, coarser test
+python backtest.py --ticker XAUUSD=X --period 60d
+```
+
+Read the limitations in the script's docstring before trusting the
+output for real capital -- yfinance's 60-day cap on 15m data means this
+is a recent-behavior check, not a multi-year edge validation, and no
+spread/slippage is modeled. Re-run periodically and re-tune
+`ADX_MIN_TREND_STRENGTH` / `RSI_BUY_MAX` / `RSI_SELL_MIN` etc. in
+`gold_signal_engine.py` based on what you see.
+
 ## ⚠️ Disclaimer
 
 This is an educational signal-generation tool, not financial advice. It

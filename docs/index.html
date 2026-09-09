@@ -715,6 +715,7 @@
   }
 
   .status-dot.off { background: var(--text2); animation: none; }
+  .status-dot.stale { background: var(--orange); animation: pulse 1.5s infinite; }
 
   /* ===== PRICE TICKER ===== */
   .price-ticker {
@@ -1164,8 +1165,24 @@
       const data = await res.json();
       latestData = data;
       renderAll(data);
-      document.getElementById('sysDot').className = 'status-dot';
-      document.getElementById('sysStatus').textContent = 'ระบบทำงานปกติ — เชื่อมต่อบอทสำเร็จ';
+
+      // --- Staleness check: the bot is supposed to update data.json every
+      //     15 minutes while the market is open. If it hasn't, something is
+      //     wrong (fetch blocked, workflow failing, GitHub Actions cron
+      //     delayed) -- warn visibly instead of silently showing old data. ---
+      const STALE_THRESHOLD_MS = 25 * 60 * 1000; // 25 min grace over the 15-min cycle
+      const ageMs = data.generated_at_utc ? (Date.now() - new Date(data.generated_at_utc + 'Z').getTime()) : null;
+      const isStale = data.market_open && ageMs !== null && ageMs > STALE_THRESHOLD_MS;
+
+      if (isStale) {
+        const ageMin = Math.round(ageMs / 60000);
+        document.getElementById('sysDot').className = 'status-dot stale';
+        document.getElementById('sysStatus').textContent =
+          `⚠️ ข้อมูลไม่อัปเดต ${ageMin} นาทีแล้ว — บอทอาจหยุดทำงาน (เช็ก GitHub Actions)`;
+      } else {
+        document.getElementById('sysDot').className = 'status-dot';
+        document.getElementById('sysStatus').textContent = 'ระบบทำงานปกติ — เชื่อมต่อบอทสำเร็จ';
+      }
 
       // --- Server-side history (visible from any device/browser) ---
       const signalLog = await fetchJsonSafe(SIGNAL_LOG_URL, []);

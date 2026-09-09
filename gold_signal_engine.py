@@ -83,6 +83,26 @@ REQUIRE_SIGNAL_CONFIRMATION: bool = True
 RSI_BUY_MAX: float = 70.0     # reject BUY if RSI already overbought
 RSI_SELL_MIN: float = 30.0    # reject SELL if RSI already oversold
 
+# --- ADX trend-strength filter (additional whipsaw reduction) ---
+# An EMA crossover in a genuinely flat/choppy market is the single
+# biggest source of false signals -- RSI/MACD confirm *direction* but not
+# whether a real trend actually exists. ADX < ~20 conventionally means
+# "no trend, don't trade it" regardless of which way the crossover points.
+REQUIRE_ADX_FILTER: bool = True
+ADX_PERIOD: int = 14
+ADX_MIN_TREND_STRENGTH: float = 20.0
+
+# --- Higher-timeframe (HTF) trend filter ---
+# The single biggest cause of losing whipsaw trades is taking a 15m
+# crossover that runs straight into the opposing direction of the bigger
+# trend. This resamples the SAME already-fetched 15m candles up to 1H
+# (no extra API call/rate-limit risk) and only allows a BUY when the 1H
+# trend is up, or a SELL when the 1H trend is down.
+REQUIRE_HTF_TREND_FILTER: bool = True
+HTF_RESAMPLE_RULE: str = "1h"
+HTF_TREND_EMA_FAST: int = 20
+HTF_TREND_EMA_SLOW: int = 50
+
 # --- Paper trading simulation (unified system, driven by the CONTINUOUS
 # dashboard score from build_dashboard_analysis -- not the discrete
 # Telegram EMA-crossover alert). One simulated position at a time. ---
@@ -107,6 +127,16 @@ DAILY_PAUSE_END_HOUR: int = 7           # market resumes 07:00 ICT (weekday) / M
 # local `--loop` mode (see bottom of file).
 POLL_INTERVAL_SECONDS: int = 60
 REQUEST_TIMEOUT_SECONDS: int = 15       # network timeout for yfinance / Telegram calls
+FETCH_MAX_RETRIES: int = 3              # transient Yahoo Finance blips (rate limiting, timeouts)
+FETCH_RETRY_BACKOFF_SECONDS: float = 5.0
+TELEGRAM_MAX_RETRIES: int = 3           # transient Telegram API blips
+TELEGRAM_RETRY_BACKOFF_SECONDS: float = 3.0
+
+# --- Outage self-alerting ---
+# If the bot fails to fetch data (or crashes) this many *consecutive* runs
+# (~45 min at the 15-min cron interval), send ONE Telegram alert so you find
+# out immediately instead of the dashboard silently going stale for days.
+CONSECUTIVE_FAILURE_ALERT_THRESHOLD: int = 3
 
 # --- Logging ---
 logging.basicConfig(
@@ -315,41 +345,58 @@ def fetch_price_data(ticker: str = TICKER, interval: str = INTERVAL,
     Fetches OHLCV candle data from Yahoo Finance via yfinance.
     Returns None (instead of raising) on any failure so the main loop can
     gracefully skip this cycle without crashing.
+
+    Retries a few times with a short backoff first: Yahoo Finance regularly
+    rate-limits or times out for a single request, and previously a single
+    blip meant a silently skipped cycle (and, if it happened on the exact
+    candle a crossover formed, a missed alert). Most of these clear up
+    within a few seconds.
     """
-    try:
-        df = yf.download(
-            tickers=ticker,
-            interval=interval,
-            period=period,
-            progress=False,
-            auto_adjust=True,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
+    import time as _time
 
-        if df is None or df.empty:
-            logger.warning("yfinance returned empty data for %s (%s/%s).", ticker, interval, period)
-            return None
+    last_exc: Optional[Exception] = None
+    for attempt in range(1, FETCH_MAX_RETRIES + 1):
+        try:
+            df = yf.download(
+                tickers=ticker,
+                interval=interval,
+                period=period,
+                progress=False,
+                auto_adjust=True,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
 
-        # yfinance sometimes returns MultiIndex columns (esp. single-ticker w/ new versions)
-        if isinstance(df.columns, pd.MultiIndex):
-            df.columns = df.columns.get_level_values(0)
+            if df is None or df.empty:
+                logger.warning("yfinance returned empty data for %s (%s/%s) [attempt %d/%d].",
+                                ticker, interval, period, attempt, FETCH_MAX_RETRIES)
+                last_exc = RuntimeError("empty dataframe from yfinance")
+            else:
+                # yfinance sometimes returns MultiIndex columns (esp. single-ticker w/ new versions)
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
 
-        required_cols = {"Open", "High", "Low", "Close"}
-        if not required_cols.issubset(set(df.columns)):
-            logger.error("Missing required OHLC columns in fetched data: %s", df.columns.tolist())
-            return None
+                required_cols = {"Open", "High", "Low", "Close"}
+                if not required_cols.issubset(set(df.columns)):
+                    logger.error("Missing required OHLC columns in fetched data: %s", df.columns.tolist())
+                    last_exc = RuntimeError("missing OHLC columns")
+                else:
+                    df = df.dropna(subset=["Open", "High", "Low", "Close"])
+                    if df.empty:
+                        logger.warning("Data became empty after dropping NaN rows.")
+                        last_exc = RuntimeError("all rows NaN after dropna")
+                    else:
+                        return df  # success
 
-        df = df.dropna(subset=["Open", "High", "Low", "Close"])
-        if df.empty:
-            logger.warning("Data became empty after dropping NaN rows.")
-            return None
+        except Exception as exc:  # network errors, timeouts, parsing issues, etc.
+            last_exc = exc
+            logger.error("Failed to fetch price data [attempt %d/%d]: %s", attempt, FETCH_MAX_RETRIES, exc)
+            logger.debug(traceback.format_exc())
 
-        return df
+        if attempt < FETCH_MAX_RETRIES:
+            _time.sleep(FETCH_RETRY_BACKOFF_SECONDS * attempt)  # linear backoff: 5s, 10s...
 
-    except Exception as exc:  # network errors, timeouts, parsing issues, etc.
-        logger.error("Failed to fetch price data: %s", exc)
-        logger.debug(traceback.format_exc())
-        return None
+    logger.error("Giving up on fetching price data after %d attempts: %s", FETCH_MAX_RETRIES, last_exc)
+    return None
 
 
 # ==============================================================================
@@ -381,12 +428,90 @@ def calculate_atr(df: pd.DataFrame, period: int = ATR_PERIOD) -> pd.Series:
     return atr
 
 
+def calculate_adx(df: pd.DataFrame, period: int = ADX_PERIOD) -> pd.Series:
+    """
+    Average Directional Index (Wilder's method): measures trend STRENGTH
+    regardless of direction (0-100; conventionally <20 = no/weak trend,
+    >25 = trending). Used to reject EMA crossovers that fire in a flat,
+    directionless market -- the classic whipsaw scenario.
+    """
+    high, low, close = df["High"], df["Low"], df["Close"]
+    prev_high, prev_low, prev_close = high.shift(1), low.shift(1), close.shift(1)
+
+    up_move = high - prev_high
+    down_move = prev_low - low
+    plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
+    minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
+    plus_dm = pd.Series(plus_dm, index=df.index)
+    minus_dm = pd.Series(minus_dm, index=df.index)
+
+    tr1 = high - low
+    tr2 = (high - prev_close).abs()
+    tr3 = (low - prev_close).abs()
+    true_range = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+    atr_wilder = true_range.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    plus_di = 100 * (plus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder)
+    minus_di = 100 * (minus_dm.ewm(alpha=1 / period, adjust=False, min_periods=period).mean() / atr_wilder)
+
+    dx = 100 * (plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, np.nan)
+    adx = dx.ewm(alpha=1 / period, adjust=False, min_periods=period).mean()
+    return adx
+
+
+def calculate_htf_trend_series(df: pd.DataFrame, rule: str = HTF_RESAMPLE_RULE,
+                                fast: int = HTF_TREND_EMA_FAST,
+                                slow: int = HTF_TREND_EMA_SLOW) -> pd.Series:
+    """
+    Resamples the 15m OHLC data up to a higher timeframe (default 1H) and
+    derives a per-bar trend direction ("up"/"down") from an EMA crossover
+    on that timeframe, then forward-fills it back onto the original 15m
+    index. This is causal / lookahead-safe: each 1H bar's EMA only uses
+    15m candles that occurred within or before that hour, and ffill only
+    ever propagates a COMPLETED 1H bar's trend forward to later 15m rows
+    -- never backward. Safe for both live use and backtesting.
+
+    Returns a Series aligned to df.index with values "up", "down", or NaN
+    during warmup (not enough HTF history yet).
+    """
+    try:
+        htf = df[["Open", "High", "Low", "Close"]].resample(rule).agg({
+            "Open": "first", "High": "max", "Low": "min", "Close": "last",
+        }).dropna()
+        if len(htf) < slow + 2:
+            return pd.Series(index=df.index, dtype=object)
+
+        htf_ema_fast = calculate_ema(htf["Close"], fast)
+        htf_ema_slow = calculate_ema(htf["Close"], slow)
+        htf_trend = pd.Series(
+            np.where(htf_ema_fast > htf_ema_slow, "up", "down"),
+            index=htf.index,
+        )
+        htf_trend[htf_ema_fast.isna() | htf_ema_slow.isna()] = np.nan
+        return htf_trend.reindex(df.index, method="ffill")
+    except Exception as exc:
+        logger.warning("HTF trend calculation failed: %s", exc)
+        return pd.Series(index=df.index, dtype=object)
+
+
+def calculate_htf_trend(df: pd.DataFrame, rule: str = HTF_RESAMPLE_RULE,
+                         fast: int = HTF_TREND_EMA_FAST,
+                         slow: int = HTF_TREND_EMA_SLOW) -> Optional[str]:
+    """Convenience wrapper for live use: latest HTF trend value, or None."""
+    series = calculate_htf_trend_series(df, rule, fast, slow)
+    if series.empty:
+        return None
+    latest = series.iloc[-1]
+    return latest if isinstance(latest, str) else None
+
+
 def apply_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """Attaches Fast EMA, Slow EMA, and ATR columns to the OHLCV dataframe."""
+    """Attaches Fast EMA, Slow EMA, ATR, and ADX columns to the OHLCV dataframe."""
     df = df.copy()
     df["ema_fast"] = calculate_ema(df["Close"], EMA_FAST_PERIOD)
     df["ema_slow"] = calculate_ema(df["Close"], EMA_SLOW_PERIOD)
     df["atr"] = calculate_atr(df, ATR_PERIOD)
+    df["adx"] = calculate_adx(df, ADX_PERIOD)
     return df
 
 
@@ -446,7 +571,8 @@ def calculate_bollinger_bands(series: pd.Series, period: int = 20,
     return upper, middle, lower
 
 
-def build_dashboard_analysis(df: pd.DataFrame) -> dict:
+def build_dashboard_analysis(df: pd.DataFrame, adx_val: Optional[float] = None,
+                              htf_trend: Optional[str] = None) -> dict:
     """
     Re-implements the dashboard's original client-side scoring logic
     (SMA20/50 golden-cross, price vs SMA20, RSI zones, MACD histogram,
@@ -532,6 +658,22 @@ def build_dashboard_analysis(df: pd.DataFrame) -> dict:
         else:
             conditions.append({"name": "ราคาอยู่ใน Bollinger Band", "badge": "neutral"})
 
+    # --- ADX trend strength (informational badge; does not affect buy/sell
+    #     score above -- it's the confirmation filter for Telegram alerts,
+    #     shown here so the reasoning is visible on the dashboard too) ---
+    if adx_val is not None and not pd.isna(adx_val):
+        if adx_val >= ADX_MIN_TREND_STRENGTH:
+            conditions.append({"name": f"ADX {adx_val:.1f} มีเทรนด์ชัดเจน (>= {ADX_MIN_TREND_STRENGTH:.0f})", "badge": "neutral"})
+        else:
+            conditions.append({"name": f"ADX {adx_val:.1f} Sideways/ไม่มีเทรนด์ (< {ADX_MIN_TREND_STRENGTH:.0f})", "badge": "neutral"})
+
+    # --- Higher-timeframe (1H) trend (informational badge, same reasoning
+    #     as the ADX badge above) ---
+    if htf_trend in ("up", "down"):
+        label = "ขาขึ้น" if htf_trend == "up" else "ขาลง"
+        badge = "buy" if htf_trend == "up" else "sell"
+        conditions.append({"name": f"เทรนด์ 1H: {label}", "badge": badge})
+
     # --- Final signal + strength ---
     if buy_score > sell_score and buy_score >= 4:
         signal, strength = "buy", min(5, buy_score // 2)
@@ -557,6 +699,8 @@ def build_dashboard_analysis(df: pd.DataFrame) -> dict:
         "histogram": _safe(hist_val),
         "bb_upper": _safe(bb_upper_val),
         "bb_lower": _safe(bb_lower_val),
+        "adx": _safe(adx_val),
+        "htf_trend": htf_trend if htf_trend in ("up", "down") else None,
         "conditions": conditions,
         # --- history series for the charts (aligned, nulls during warmup) ---
         "history": {
@@ -639,30 +783,56 @@ def check_signal_confirmation(
     signal_type: Literal["BUY", "SELL"],
     rsi_val: Optional[float],
     macd_hist_val: Optional[float],
+    adx_val: Optional[float] = None,
+    htf_trend: Optional[str] = None,
 ) -> Tuple[bool, str]:
     """
-    Confirms (or rejects) a raw EMA-crossover signal using RSI and MACD
-    histogram, both already computed by build_dashboard_analysis():
+    Confirms (or rejects) a raw EMA-crossover signal using RSI, MACD
+    histogram, ADX trend strength, and the higher-timeframe (1H) trend:
       - BUY  requires RSI < RSI_BUY_MAX (not overbought) AND MACD histogram > 0 (bullish momentum)
       - SELL requires RSI > RSI_SELL_MIN (not oversold) AND MACD histogram < 0 (bearish momentum)
+      - Either direction additionally requires ADX >= ADX_MIN_TREND_STRENGTH
+        when REQUIRE_ADX_FILTER is on, rejecting crossovers that fire in a
+        flat/directionless market (the main source of whipsaw losses).
+      - Either direction additionally requires the 1H trend to agree
+        (BUY needs htf_trend == "up", SELL needs "down") when
+        REQUIRE_HTF_TREND_FILTER is on, rejecting 15m crossovers that fire
+        against the larger trend.
     Returns (confirmed: bool, human_readable_reason: str).
     """
     if rsi_val is None or macd_hist_val is None or pd.isna(rsi_val) or pd.isna(macd_hist_val):
         return True, "RSI/MACD ยังไม่มีค่า -- ข้ามการยืนยัน ปล่อยผ่านสัญญาณเดิม"
+
+    if REQUIRE_ADX_FILTER and adx_val is not None and not pd.isna(adx_val):
+        if adx_val < ADX_MIN_TREND_STRENGTH:
+            return False, (
+                f"ADX {adx_val:.1f} ต่ำกว่า {ADX_MIN_TREND_STRENGTH:.0f} "
+                f"(ตลาด sideways/ไม่มีเทรนด์ชัดเจน) -- ยกเลิกสัญญาณ {signal_type}"
+            )
+
+    if REQUIRE_HTF_TREND_FILTER and htf_trend in ("up", "down"):
+        if signal_type == "BUY" and htf_trend != "up":
+            return False, f"เทรนด์ 1H เป็นขาลง -- ยกเลิกสัญญาณ BUY (สวนเทรนด์ใหญ่)"
+        if signal_type == "SELL" and htf_trend != "down":
+            return False, f"เทรนด์ 1H เป็นขาขึ้น -- ยกเลิกสัญญาณ SELL (สวนเทรนด์ใหญ่)"
 
     if signal_type == "BUY":
         if rsi_val >= RSI_BUY_MAX:
             return False, f"RSI {rsi_val:.1f} เข้าเขต Overbought (>= {RSI_BUY_MAX:.0f}) -- ยกเลิกสัญญาณ BUY"
         if macd_hist_val <= 0:
             return False, f"MACD Histogram {macd_hist_val:.2f} ยังไม่เป็นขาขึ้น -- ยกเลิกสัญญาณ BUY"
-        return True, f"ยืนยัน BUY: RSI {rsi_val:.1f} (<{RSI_BUY_MAX:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาขึ้น)"
+        adx_note = f", ADX {adx_val:.1f}" if adx_val is not None and not pd.isna(adx_val) else ""
+        htf_note = f", 1H={htf_trend}" if htf_trend in ("up", "down") else ""
+        return True, f"ยืนยัน BUY: RSI {rsi_val:.1f} (<{RSI_BUY_MAX:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาขึ้น){adx_note}{htf_note}"
 
     # SELL
     if rsi_val <= RSI_SELL_MIN:
         return False, f"RSI {rsi_val:.1f} เข้าเขต Oversold (<= {RSI_SELL_MIN:.0f}) -- ยกเลิกสัญญาณ SELL"
     if macd_hist_val >= 0:
         return False, f"MACD Histogram {macd_hist_val:.2f} ยังไม่เป็นขาลง -- ยกเลิกสัญญาณ SELL"
-    return True, f"ยืนยัน SELL: RSI {rsi_val:.1f} (>{RSI_SELL_MIN:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาลง)"
+    adx_note = f", ADX {adx_val:.1f}" if adx_val is not None and not pd.isna(adx_val) else ""
+    htf_note = f", 1H={htf_trend}" if htf_trend in ("up", "down") else ""
+    return True, f"ยืนยัน SELL: RSI {rsi_val:.1f} (>{RSI_SELL_MIN:.0f}) และ MACD Histogram {macd_hist_val:.2f} (ขาลง){adx_note}{htf_note}"
 
 
 # ==============================================================================
@@ -865,7 +1035,15 @@ def send_telegram_alert(message: str) -> bool:
     """
     Sends a message to Telegram via the Bot API sendMessage endpoint.
     Returns True on success, False on failure (never raises).
+
+    Retries a few times with backoff first -- a single Telegram API hiccup
+    used to mean the alert was dropped for good (the candle still got
+    marked "processed" by the caller either way, so it would never be
+    retried on the next run). This makes a transient failure much less
+    likely to actually cost you a missed alert.
     """
+    import time as _time
+
     if not TELEGRAM_BOT_TOKEN or "YOUR_TELEGRAM" in TELEGRAM_BOT_TOKEN:
         logger.warning("Telegram bot token not configured -- skipping alert dispatch.")
         return False
@@ -878,22 +1056,30 @@ def send_telegram_alert(message: str) -> bool:
         "disable_web_page_preview": True,
     }
 
-    try:
-        response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        result = response.json()
-        if not result.get("ok", False):
-            logger.error("Telegram API returned an error: %s", result)
-            return False
-        logger.info("Telegram alert sent successfully.")
-        return True
+    for attempt in range(1, TELEGRAM_MAX_RETRIES + 1):
+        try:
+            response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            result = response.json()
+            if not result.get("ok", False):
+                logger.error("Telegram API returned an error [attempt %d/%d]: %s",
+                             attempt, TELEGRAM_MAX_RETRIES, result)
+            else:
+                logger.info("Telegram alert sent successfully.")
+                return True
 
-    except requests.exceptions.RequestException as exc:
-        logger.error("Failed to send Telegram message: %s", exc)
-        return False
-    except Exception as exc:  # e.g. JSON decode error
-        logger.error("Unexpected error sending Telegram message: %s", exc)
-        return False
+        except requests.exceptions.RequestException as exc:
+            logger.error("Failed to send Telegram message [attempt %d/%d]: %s",
+                         attempt, TELEGRAM_MAX_RETRIES, exc)
+        except Exception as exc:  # e.g. JSON decode error
+            logger.error("Unexpected error sending Telegram message [attempt %d/%d]: %s",
+                         attempt, TELEGRAM_MAX_RETRIES, exc)
+
+        if attempt < TELEGRAM_MAX_RETRIES:
+            _time.sleep(TELEGRAM_RETRY_BACKOFF_SECONDS * attempt)
+
+    logger.error("Giving up on sending Telegram alert after %d attempts.", TELEGRAM_MAX_RETRIES)
+    return False
 
 
 # ==============================================================================
@@ -931,7 +1117,9 @@ def run_signal_cycle(
     # --- Continuous dashboard score: always computed, independent of the
     #     anti-spam guard below, since it drives the dashboard UI and the
     #     paper-trading simulation on EVERY run, not just on new candles. ---
-    analysis = build_dashboard_analysis(df)
+    latest_adx_for_dashboard = df_valid["adx"].iloc[-1] if "adx" in df_valid.columns and not df_valid.empty else None
+    latest_htf_trend = calculate_htf_trend(df) if REQUIRE_HTF_TREND_FILTER else None
+    analysis = build_dashboard_analysis(df, latest_adx_for_dashboard, latest_htf_trend)
 
     # --- Anti-spam guard: only evaluate a NEW Telegram alert once per closed candle ---
     if last_processed_candle_time is not None and latest_candle_time <= last_processed_candle_time:
@@ -950,6 +1138,7 @@ def run_signal_cycle(
     if REQUIRE_SIGNAL_CONFIRMATION:
         confirmed, reason = check_signal_confirmation(
             raw_signal_type, analysis.get("rsi"), analysis.get("histogram"),
+            analysis.get("adx"), analysis.get("htf_trend"),
         )
     else:
         confirmed, reason = True, "การยืนยันสัญญาณถูกปิดใช้งาน (REQUIRE_SIGNAL_CONFIRMATION=False)"
@@ -1037,6 +1226,38 @@ def main() -> int:
         extra_fields: dict = {}
         paper_summary: Optional[dict] = None
 
+        # --- Outage self-alerting ----------------------------------------
+        # A failed fetch (df is None) used to just log a warning and exit
+        # 0 -- the GitHub Actions run still shows green, so nothing ever
+        # tells you the bot has actually stopped working (this is why the
+        # dashboard can go stale for days without any signal). Track
+        # consecutive failures across runs via state.json and fire ONE
+        # Telegram alert once the threshold is crossed, then one "back up"
+        # alert on recovery. Never spams every run while still down.
+        fetch_failed = df is None
+        consecutive_failures = int(state.get("consecutive_failures", 0))
+        down_alert_sent = bool(state.get("down_alert_sent", False))
+
+        if fetch_failed:
+            consecutive_failures += 1
+            logger.warning("Fetch failed this cycle (%d consecutive failure(s)).", consecutive_failures)
+            if consecutive_failures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD and not down_alert_sent:
+                send_telegram_alert(
+                    "🔴 <b>Gold Signal Bot: ไม่สามารถดึงข้อมูลได้</b>\n"
+                    f"ล้มเหลวติดต่อกัน {consecutive_failures} ครั้ง (~"
+                    f"{consecutive_failures * 15} นาที) -- ตรวจสอบ GitHub Actions logs "
+                    "(อาจเป็น Yahoo Finance บล็อก/rate-limit หรือ workflow error)"
+                )
+                down_alert_sent = True
+        else:
+            if down_alert_sent:
+                send_telegram_alert("🟢 <b>Gold Signal Bot: กลับมาทำงานปกติแล้ว</b>")
+            consecutive_failures = 0
+            down_alert_sent = False
+
+        extra_fields["consecutive_failures"] = consecutive_failures
+        extra_fields["down_alert_sent"] = down_alert_sent
+
         # --- Paper trading + signal-change log (uses the CONTINUOUS dashboard
         #     score, computed on every run regardless of whether a new candle
         #     or a confirmed Telegram alert occurred this cycle) ---
@@ -1122,9 +1343,28 @@ def main() -> int:
 
     except Exception as exc:
         # Catch-all so a transient network/API error never fails the whole
-        # GitHub Actions run with an unhandled traceback.
+        # GitHub Actions run with an unhandled traceback. Still counts
+        # toward the outage self-alert so a recurring crash doesn't go
+        # unnoticed either (previously this was pure silence).
         logger.error("Unhandled exception during cycle: %s", exc)
         logger.debug(traceback.format_exc())
+        try:
+            state = load_state()
+            consecutive_failures = int(state.get("consecutive_failures", 0)) + 1
+            down_alert_sent = bool(state.get("down_alert_sent", False))
+            if consecutive_failures >= CONSECUTIVE_FAILURE_ALERT_THRESHOLD and not down_alert_sent:
+                send_telegram_alert(
+                    "🔴 <b>Gold Signal Bot: เกิดข้อผิดพลาดซ้ำๆ</b>\n"
+                    f"ล้มเหลวติดต่อกัน {consecutive_failures} ครั้ง -- ตรวจสอบ GitHub Actions logs\n"
+                    f"ข้อความล่าสุด: {exc}"
+                )
+                down_alert_sent = True
+            save_state(extra_fields={
+                "consecutive_failures": consecutive_failures,
+                "down_alert_sent": down_alert_sent,
+            })
+        except Exception:
+            pass  # never let the outage-alert path itself crash the run
 
     logger.info("Cycle complete.")
     return 0
