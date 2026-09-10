@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-09-10T19:40:26.503105",
-  "market_time_ict": "2026-09-11 02:40:26",
+  "generated_at_utc": "2026-09-10T19:52:57.699359",
+  "market_time_ict": "2026-09-11 02:52:57",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
@@ -9,15 +9,15 @@
     "strength": 2,
     "buy_score": 3,
     "sell_score": 5,
-    "current_price": 4368.4,
-    "ma20": 4392.89,
-    "ma50": 4411.05,
-    "rsi": 28.11,
-    "macd": -11.91,
-    "macd_signal": -9.46,
-    "histogram": -2.45,
-    "bb_upper": 4423.98,
-    "bb_lower": 4361.8,
+    "current_price": 4366.5,
+    "ma20": 4392.79,
+    "ma50": 4411.01,
+    "rsi": 27.4,
+    "macd": -12.07,
+    "macd_signal": -9.49,
+    "histogram": -2.57,
+    "bb_upper": 4424.21,
+    "bb_lower": 4361.38,
     "adx": 41.65,
     "htf_trend": "down",
     "conditions": [
@@ -30,11 +30,11 @@
         "badge": "sell"
       },
       {
-        "name": "RSI 28.1 Oversold (<30)",
+        "name": "RSI 27.4 Oversold (<30)",
         "badge": "buy"
       },
       {
-        "name": "MACD Histogram -2.5",
+        "name": "MACD Histogram -2.6",
         "badge": "sell"
       },
       {
@@ -213,7 +213,7 @@
         4374.4,
         4363.7,
         4368.8,
-        4368.4
+        4366.5
       ],
       "ma20": [
         4446.65,
@@ -295,7 +295,7 @@
         4398.17,
         4396.26,
         4394.41,
-        4392.89
+        4392.79
       ],
       "ma50": [
         4449.93,
@@ -377,7 +377,7 @@
         4416.96,
         4414.83,
         4412.82,
-        4411.05
+        4411.01
       ],
       "rsi": [
         33.62,
@@ -459,7 +459,7 @@
         24.81,
         20.79,
         25.81,
-        28.11
+        27.4
       ],
       "macd": [
         -2.91,
@@ -541,7 +541,7 @@
         -9.53,
         -10.96,
         -11.55,
-        -11.91
+        -12.07
       ],
       "histogram": [
         -0.95,
@@ -623,7 +623,7 @@
         -2.05,
         -2.79,
         -2.7,
-        -2.45
+        -2.57
       ]
     }
   },
@@ -652,18 +652,6 @@
       "win_rate_pct": 28.6,
       "current_balance_usd": 971.55
     },
-    "recent_trades": [
-      {
-        "direction": "BUY",
-        "entry_price": 4372.4,
-        "entry_time": "2026-09-10T14:45:00-04:00",
-        "exit_price": 4368.4,
-        "exit_time": "2026-09-10T15:30:00-04:00",
-        "exit_reason": "signal_flip",
-        "stop_loss": 4350.95,
-        "take_profit": 4415.3,
-        "pnl_usd": -2.8
-      }
-    ]
+    "recent_trades": []
   }
 }
