@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-09-11T17:41:24.868601",
-  "market_time_ict": "2026-09-12 00:41:24",
+  "generated_at_utc": "2026-09-11T17:54:23.182344",
+  "market_time_ict": "2026-09-12 00:54:22",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
@@ -9,16 +9,16 @@
     "strength": 2,
     "buy_score": 3,
     "sell_score": 3,
-    "current_price": 4410.8,
-    "ma20": 4415.83,
-    "ma50": 4398.1,
-    "rsi": 39.29,
-    "macd": 2.63,
-    "macd_signal": 4.2,
-    "histogram": -1.57,
-    "bb_upper": 4441.63,
-    "bb_lower": 4390.03,
-    "adx": 17.86,
+    "current_price": 4404.7,
+    "ma20": 4415.53,
+    "ma50": 4397.98,
+    "rsi": 35.34,
+    "macd": 2.14,
+    "macd_signal": 4.1,
+    "histogram": -1.96,
+    "bb_upper": 4441.71,
+    "bb_lower": 4389.34,
+    "adx": 18.16,
     "htf_trend": "down",
     "conditions": [
       {
@@ -30,11 +30,11 @@
         "badge": "sell"
       },
       {
-        "name": "RSI 39.3 (Weak Bear)",
+        "name": "RSI 35.3 (Weak Bear)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram -1.6",
+        "name": "MACD Histogram -2.0",
         "badge": "sell"
       },
       {
@@ -42,7 +42,7 @@
         "badge": "neutral"
       },
       {
-        "name": "ADX 17.9 Sideways/ไม่มีเทรนด์ (< 20)",
+        "name": "ADX 18.2 Sideways/ไม่มีเทรนด์ (< 20)",
         "badge": "neutral"
       },
       {
@@ -213,7 +213,7 @@
         4403.8,
         4407.6,
         4409.1,
-        4410.8
+        4404.7
       ],
       "ma20": [
         4381.84,
@@ -295,7 +295,7 @@
         4411.82,
         4413.71,
         4415.06,
-        4415.83
+        4415.53
       ],
       "ma50": [
         4401.98,
@@ -377,7 +377,7 @@
         4395.98,
         4396.72,
         4397.46,
-        4398.1
+        4397.98
       ],
       "rsi": [
         9.09,
@@ -459,7 +459,7 @@
         34.76,
         33.96,
         29.34,
-        39.29
+        35.34
       ],
       "macd": [
         -13.31,
@@ -541,7 +541,7 @@
         2.84,
         2.64,
         2.57,
-        2.63
+        2.14
       ],
       "histogram": [
         -1.42,
@@ -623,7 +623,7 @@
         -2.88,
         -2.46,
         -2.02,
-        -1.57
+        -1.96
       ]
     }
   },
