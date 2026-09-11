@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-11T02:30:00-04:00",
-  "updated_at_utc": "2026-09-11T06:47:25.720507",
+  "last_processed_candle_time": "2026-09-11T03:00:00-04:00",
+  "updated_at_utc": "2026-09-11T07:16:30.504859",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-08-31T22:45:00-04:00",
@@ -24,8 +24,8 @@
   },
   "last_dashboard_signal": "buy",
   "last_confirmation": {
-    "raw_signal": "SELL",
+    "raw_signal": "BUY",
     "confirmed": false,
-    "reason": "ADX 16.1 \u0e15\u0e48\u0e33\u0e01\u0e27\u0e48\u0e32 20 (\u0e15\u0e25\u0e32\u0e14 sideways/\u0e44\u0e21\u0e48\u0e21\u0e35\u0e40\u0e17\u0e23\u0e19\u0e14\u0e4c\u0e0a\u0e31\u0e14\u0e40\u0e08\u0e19) -- \u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e2a\u0e31\u0e0d\u0e0d\u0e32\u0e13 SELL"
+    "reason": "\u0e40\u0e17\u0e23\u0e19\u0e14\u0e4c 1H \u0e40\u0e1b\u0e47\u0e19\u0e02\u0e32\u0e25\u0e07 -- \u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e2a\u0e31\u0e0d\u0e0d\u0e32\u0e13 BUY (\u0e2a\u0e27\u0e19\u0e40\u0e17\u0e23\u0e19\u0e14\u0e4c\u0e43\u0e2b\u0e0d\u0e48)"
   }
 }
