@@ -1,24 +1,24 @@
 {
-  "generated_at_utc": "2026-09-16T10:19:21.071793",
-  "market_time_ict": "2026-09-16 17:19:20",
+  "generated_at_utc": "2026-09-16T10:43:38.247436",
+  "market_time_ict": "2026-09-16 17:43:37",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
   "analysis": {
-    "signal": "sell",
-    "strength": 3,
-    "buy_score": 3,
-    "sell_score": 6,
-    "current_price": 4385.2,
-    "ma20": 4372.1,
-    "ma50": 4353.99,
-    "rsi": 67.28,
-    "macd": 6.06,
-    "macd_signal": 6.06,
-    "histogram": -0.0,
-    "bb_upper": 4382.1,
-    "bb_lower": 4362.1,
-    "adx": 24.86,
+    "signal": "buy",
+    "strength": 2,
+    "buy_score": 5,
+    "sell_score": 4,
+    "current_price": 4388.9,
+    "ma20": 4373.98,
+    "ma50": 4356.2,
+    "rsi": 64.44,
+    "macd": 7.18,
+    "macd_signal": 6.37,
+    "histogram": 0.81,
+    "bb_upper": 4387.78,
+    "bb_lower": 4360.19,
+    "adx": 26.92,
     "htf_trend": "up",
     "conditions": [
       {
@@ -26,23 +26,23 @@
         "badge": "buy"
       },
       {
-        "name": "ราคา > MA20 (4,372)",
+        "name": "ราคา > MA20 (4,374)",
         "badge": "buy"
       },
       {
-        "name": "RSI 67.3 (Weak Bull)",
+        "name": "RSI 64.4 (Weak Bull)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram -0.0",
+        "name": "MACD Histogram +0.8",
+        "badge": "buy"
+      },
+      {
+        "name": "ราคาสูงกว่า BB Upper (4,388)",
         "badge": "sell"
       },
       {
-        "name": "ราคาสูงกว่า BB Upper (4,382)",
-        "badge": "sell"
-      },
-      {
-        "name": "ADX 24.9 มีเทรนด์ชัดเจน (>= 20)",
+        "name": "ADX 26.9 มีเทรนด์ชัดเจน (>= 20)",
         "badge": "neutral"
       },
       {
@@ -52,8 +52,6 @@
     ],
     "history": {
       "labels": [
-        "15/09 09:15",
-        "15/09 09:30",
         "15/09 09:45",
         "15/09 10:00",
         "15/09 10:15",
@@ -131,11 +129,11 @@
         "16/09 05:15",
         "16/09 05:30",
         "16/09 05:45",
-        "16/09 06:00"
+        "16/09 06:00",
+        "16/09 06:15",
+        "16/09 06:30"
       ],
       "prices": [
-        4327.4,
-        4329.6,
         4334.6,
         4334.5,
         4324.4,
@@ -213,11 +211,11 @@
         4370.6,
         4376.1,
         4379.1,
-        4385.2
+        4383.8,
+        4389.3,
+        4388.9
       ],
       "ma20": [
-        4317.12,
-        4318.21,
         4319.8,
         4321.22,
         4322.09,
@@ -295,11 +293,11 @@
         4369.52,
         4370.14,
         4370.96,
-        4372.1
+        4372.03,
+        4373.21,
+        4373.98
       ],
       "ma50": [
-        4329.78,
-        4329.58,
         4329.43,
         4329.34,
         4328.95,
@@ -377,11 +375,11 @@
         4351.24,
         4352.04,
         4352.94,
-        4353.99
+        4353.96,
+        4355.08,
+        4356.2
       ],
       "rsi": [
-        72.0,
-        70.25,
         72.95,
         72.54,
         52.78,
@@ -459,11 +457,11 @@
         54.93,
         61.85,
         63.66,
-        67.28
+        66.32,
+        66.67,
+        64.44
       ],
       "macd": [
-        0.13,
-        0.67,
         1.48,
         2.09,
         1.74,
@@ -541,11 +539,11 @@
         5.16,
         5.22,
         5.45,
-        6.06
+        5.94,
+        6.7,
+        7.18
       ],
       "histogram": [
-        2.06,
-        2.08,
         2.31,
         2.34,
         1.59,
@@ -623,7 +621,9 @@
         -1.29,
         -0.99,
         -0.61,
-        -0.0
+        -0.09,
+        0.53,
+        0.81
       ]
     }
   },
@@ -643,22 +643,27 @@
     "reason": "ADX 17.5 ต่ำกว่า 20 (ตลาด sideways/ไม่มีเทรนด์ชัดเจน) -- ยกเลิกสัญญาณ BUY"
   },
   "paper_trading": {
-    "open_position": {
-      "direction": "SELL",
-      "entry_price": 4385.2,
-      "entry_time": "2026-09-16T06:00:00-04:00",
-      "stop_loss": 4400.0,
-      "take_profit": 4355.59,
-      "risk_amount_usd": 15.0
-    },
+    "open_position": null,
     "stats": {
-      "total_trades": 18,
+      "total_trades": 19,
       "wins": 9,
-      "losses": 9,
-      "total_pnl_usd": 18.8,
-      "win_rate_pct": 50.0,
-      "current_balance_usd": 1018.8
+      "losses": 10,
+      "total_pnl_usd": 15.05,
+      "win_rate_pct": 47.4,
+      "current_balance_usd": 1015.05
     },
-    "recent_trades": []
+    "recent_trades": [
+      {
+        "direction": "SELL",
+        "entry_price": 4385.2,
+        "entry_time": "2026-09-16T06:00:00-04:00",
+        "exit_price": 4388.9,
+        "exit_time": "2026-09-16T06:30:00-04:00",
+        "exit_reason": "signal_flip",
+        "stop_loss": 4400.0,
+        "take_profit": 4355.59,
+        "pnl_usd": -3.75
+      }
+    ]
   }
 }
