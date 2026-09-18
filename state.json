@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-17T23:30:00-04:00",
-  "updated_at_utc": "2026-09-18T03:42:37.585015",
+  "last_processed_candle_time": "2026-09-17T23:45:00-04:00",
+  "updated_at_utc": "2026-09-18T03:56:02.235174",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-09-11T08:30:00-04:00",
@@ -29,7 +29,7 @@
     "win_rate_pct": 50.0,
     "current_balance_usd": 1010.62
   },
-  "last_dashboard_signal": "sell",
+  "last_dashboard_signal": "hold",
   "last_confirmation": {
     "raw_signal": "BUY",
     "confirmed": false,
