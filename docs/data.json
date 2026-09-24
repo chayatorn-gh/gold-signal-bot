@@ -1,24 +1,24 @@
 {
-  "generated_at_utc": "2026-09-24T17:41:33.319446",
-  "market_time_ict": "2026-09-25 00:41:32",
+  "generated_at_utc": "2026-09-24T17:54:30.390485",
+  "market_time_ict": "2026-09-25 00:54:30",
   "market_open": true,
   "ticker": "GC=F",
   "interval": "15m",
   "analysis": {
     "signal": "hold",
     "strength": 2,
-    "buy_score": 2,
+    "buy_score": 3,
     "sell_score": 3,
-    "current_price": 4299.7,
-    "ma20": 4300.68,
-    "ma50": 4302.49,
-    "rsi": 46.23,
-    "macd": -0.06,
-    "macd_signal": -1.04,
-    "histogram": 0.98,
-    "bb_upper": 4320.86,
-    "bb_lower": 4280.49,
-    "adx": 19.76,
+    "current_price": 4293.6,
+    "ma20": 4300.37,
+    "ma50": 4302.36,
+    "rsi": 41.98,
+    "macd": -0.55,
+    "macd_signal": -1.14,
+    "histogram": 0.59,
+    "bb_upper": 4320.8,
+    "bb_lower": 4279.94,
+    "adx": 19.64,
     "htf_trend": "down",
     "conditions": [
       {
@@ -26,15 +26,15 @@
         "badge": "sell"
       },
       {
-        "name": "ราคา < MA20 (4,301)",
+        "name": "ราคา < MA20 (4,300)",
         "badge": "sell"
       },
       {
-        "name": "RSI 46.2 (Neutral)",
+        "name": "RSI 42.0 (Weak Bear)",
         "badge": "neutral"
       },
       {
-        "name": "MACD Histogram +1.0",
+        "name": "MACD Histogram +0.6",
         "badge": "buy"
       },
       {
@@ -42,7 +42,7 @@
         "badge": "neutral"
       },
       {
-        "name": "ADX 19.8 Sideways/ไม่มีเทรนด์ (< 20)",
+        "name": "ADX 19.6 Sideways/ไม่มีเทรนด์ (< 20)",
         "badge": "neutral"
       },
       {
@@ -213,7 +213,7 @@
         4308.7,
         4305.9,
         4298.5,
-        4299.7
+        4293.6
       ],
       "ma20": [
         4322.06,
@@ -295,7 +295,7 @@
         4301.3,
         4301.41,
         4301.01,
-        4300.68
+        4300.37
       ],
       "ma50": [
         4332.68,
@@ -377,7 +377,7 @@
         4303.82,
         4303.51,
         4302.99,
-        4302.49
+        4302.36
       ],
       "rsi": [
         47.27,
@@ -459,7 +459,7 @@
         47.98,
         48.21,
         46.96,
-        46.23
+        41.98
       ],
       "macd": [
         -2.8,
@@ -541,7 +541,7 @@
         -0.21,
         0.25,
         0.02,
-        -0.06
+        -0.55
       ],
       "histogram": [
         1.03,
@@ -623,7 +623,7 @@
         1.87,
         1.86,
         1.31,
-        0.98
+        0.59
       ]
     }
   },
