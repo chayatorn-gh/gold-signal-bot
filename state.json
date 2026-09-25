@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-25T11:45:00-04:00",
-  "updated_at_utc": "2026-09-25T15:57:07.499512",
+  "last_processed_candle_time": "2026-09-25T12:00:00-04:00",
+  "updated_at_utc": "2026-09-25T16:19:28.435786",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-09-25T11:00:00-04:00",
@@ -31,8 +31,8 @@
   },
   "last_dashboard_signal": "buy",
   "last_confirmation": {
-    "raw_signal": "SELL",
-    "confirmed": true,
-    "reason": "\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 SELL: RSI 30.7 (>30) \u0e41\u0e25\u0e30 MACD Histogram -3.10 (\u0e02\u0e32\u0e25\u0e07), ADX 28.8, 1H=down"
+    "raw_signal": "BUY",
+    "confirmed": false,
+    "reason": "\u0e40\u0e17\u0e23\u0e19\u0e14\u0e4c 1H \u0e40\u0e1b\u0e47\u0e19\u0e02\u0e32\u0e25\u0e07 -- \u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e2a\u0e31\u0e0d\u0e0d\u0e32\u0e13 BUY (\u0e2a\u0e27\u0e19\u0e40\u0e17\u0e23\u0e19\u0e14\u0e4c\u0e43\u0e2b\u0e0d\u0e48)"
   }
 }
