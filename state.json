@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-27T21:45:00-04:00",
-  "updated_at_utc": "2026-09-28T01:57:08.428814",
+  "last_processed_candle_time": "2026-09-27T22:00:00-04:00",
+  "updated_at_utc": "2026-09-28T02:18:52.344657",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-09-25T11:00:00-04:00",
