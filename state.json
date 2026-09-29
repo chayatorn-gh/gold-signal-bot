@@ -1,6 +1,6 @@
 {
-  "last_processed_candle_time": "2026-09-28T21:30:00-04:00",
-  "updated_at_utc": "2026-09-29T01:43:43.024979",
+  "last_processed_candle_time": "2026-09-28T21:45:00-04:00",
+  "updated_at_utc": "2026-09-29T01:58:26.446829",
   "last_signal": {
     "signal_type": "SELL",
     "candle_time": "2026-09-25T11:00:00-04:00",
@@ -13,7 +13,14 @@
   },
   "consecutive_failures": 0,
   "down_alert_sent": false,
-  "paper_position": null,
+  "paper_position": {
+    "direction": "SELL",
+    "entry_price": 4167.4,
+    "entry_time": "2026-09-28T21:45:00-04:00",
+    "stop_loss": 4183.15,
+    "take_profit": 4135.89,
+    "risk_amount_usd": 15.0
+  },
   "paper_stats": {
     "total_trades": 46,
     "wins": 24,
@@ -22,7 +29,7 @@
     "win_rate_pct": 52.2,
     "current_balance_usd": 1053.48
   },
-  "last_dashboard_signal": "hold",
+  "last_dashboard_signal": "sell",
   "last_confirmation": {
     "raw_signal": "BUY",
     "confirmed": false,
